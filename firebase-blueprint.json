@@ -1,0 +1,169 @@
+{
+  "entities": {
+    "Order": {
+      "title": "Order",
+      "description": "Customer order created via QR Code self-order or POS cashier",
+      "type": "object",
+      "properties": {
+        "id_transaksi": {
+          "type": "string",
+          "description": "Unique transaction or order identifier",
+          "maxLength": 64
+        },
+        "tanggal": {
+          "type": "string",
+          "description": "Order date in YYYY-MM-DD",
+          "maxLength": 32
+        },
+        "jam": {
+          "type": "string",
+          "description": "Order time in HH:mm:ss",
+          "maxLength": 32
+        },
+        "kasir": {
+          "type": "string",
+          "description": "Cashier or ordering channel name",
+          "maxLength": 64
+        },
+        "nama_pelanggan": {
+          "type": "string",
+          "description": "Customer name",
+          "maxLength": 100
+        },
+        "no_whatsapp": {
+          "type": "string",
+          "description": "Customer WhatsApp phone number",
+          "maxLength": 32
+        },
+        "subtotal": {
+          "type": "number",
+          "description": "Sum of item subtotals"
+        },
+        "diskon": {
+          "type": "number",
+          "description": "Discount amount"
+        },
+        "biaya": {
+          "type": "number",
+          "description": "Delivery or additional fees"
+        },
+        "total": {
+          "type": "number",
+          "description": "Grand total payment required"
+        },
+        "metode_pembayaran": {
+          "type": "string",
+          "description": "Payment method chosen (Cash, Transfer, QRIS)",
+          "maxLength": 32
+        },
+        "uang_diterima": {
+          "type": "number",
+          "description": "Amount received"
+        },
+        "kembalian": {
+          "type": "number",
+          "description": "Change returned"
+        },
+        "status": {
+          "type": "string",
+          "description": "Order status (Pending, Selesai, Dibatalkan, Diproses)",
+          "maxLength": 32
+        },
+        "tipe_pesanan": {
+          "type": "string",
+          "description": "Order type (Takeaway, Delivery)",
+          "maxLength": 32
+        },
+        "alamat_pengantaran": {
+          "type": "string",
+          "description": "Delivery address and landmark for delivery orders",
+          "maxLength": 300
+        },
+        "catatan_pesanan": {
+          "type": "string",
+          "description": "Additional order notes",
+          "maxLength": 300
+        },
+        "created_at": {
+          "type": "string",
+          "description": "ISO timestamp of order creation",
+          "maxLength": 64
+        },
+        "items": {
+          "type": "array",
+          "description": "List of ordered items"
+        }
+      },
+      "required": [
+        "id_transaksi",
+        "tanggal",
+        "jam",
+        "nama_pelanggan",
+        "total",
+        "metode_pembayaran",
+        "status",
+        "created_at"
+      ]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Menu product item available in Warung Bang Kobra",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Product SKU or unique ID",
+          "maxLength": 64
+        },
+        "nama": {
+          "type": "string",
+          "description": "Product display name",
+          "maxLength": 120
+        },
+        "kategori": {
+          "type": "string",
+          "description": "Menu category",
+          "maxLength": 50
+        },
+        "harga_modal": {
+          "type": "number",
+          "description": "Base cost price"
+        },
+        "harga_jual": {
+          "type": "number",
+          "description": "Selling price to customer"
+        },
+        "stok": {
+          "type": "number",
+          "description": "Remaining stock count"
+        },
+        "satuan": {
+          "type": "string",
+          "description": "Unit of measurement",
+          "maxLength": 32
+        },
+        "deskripsi": {
+          "type": "string",
+          "description": "Detailed product description",
+          "maxLength": 500
+        },
+        "gambar_url": {
+          "type": "string",
+          "description": "Image URL or photo asset path",
+          "maxLength": 500
+        }
+      },
+      "required": ["id", "nama", "kategori", "harga_jual", "stok"]
+    }
+  },
+  "firestore": {
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Customer orders submitted from mobile browsers via QR scan or by cashier"
+    },
+    "/products/{productId}": {
+      "schema": "Product",
+      "description": "Warung catalog products readable by customers and manageable by cashier"
+    }
+  }
+}
