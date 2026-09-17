@@ -24,6 +24,7 @@ const STORAGE_KEYS = {
   PRODUCTS: 'wkb_pos_products',
   CATEGORIES: 'wkb_pos_categories',
   USERS: 'wkb_pos_users',
+  AUTH_USER: 'wkb_pos_auth_user',
   TRANSACTIONS: 'wkb_pos_transactions',
   CUSTOMERS: 'wkb_pos_customers',
   EXPENSES: 'wkb_pos_expenses',
@@ -113,13 +114,57 @@ export class StorageService {
     return updated;
   }
 
-  // USERS
+  // USERS & AUTH
   static getUsers(): WarungUser[] {
-    return safeGetItem<WarungUser[]>(STORAGE_KEYS.USERS, INITIAL_USERS);
+    const users = safeGetItem<WarungUser[]>(STORAGE_KEYS.USERS, INITIAL_USERS);
+    // If the saved array is missing newer roles like Staff/Customer/Owner, merge initial users
+    const hasOwner = users.some((u) => u.role === 'Owner' || u.username === 'owner');
+    const hasStaff = users.some((u) => u.role === 'Staff');
+    const hasCustomer = users.some((u) => u.role === 'Customer');
+    if (!hasOwner || !hasStaff || !hasCustomer) {
+      const merged = [...users];
+      INITIAL_USERS.forEach((initUser) => {
+        if (!merged.some((m) => m.id === initUser.id || m.username === initUser.username)) {
+          merged.push(initUser);
+        }
+      });
+      safeSetItem(STORAGE_KEYS.USERS, merged);
+      return merged;
+    }
+    return users;
   }
 
   static saveUsers(users: WarungUser[]): void {
     safeSetItem(STORAGE_KEYS.USERS, users);
+  }
+
+  static getAuthUser(): WarungUser | null {
+    const authUser = safeGetItem<WarungUser | null>(STORAGE_KEYS.AUTH_USER, null);
+    if (authUser) return authUser;
+    // Default logged in user is the Owner for initial experience, or can be null
+    const users = this.getUsers();
+    const defaultUser = users.find((u) => u.role === 'Owner') || users[0] || INITIAL_USERS[0];
+    if (defaultUser) {
+      this.setAuthUser(defaultUser);
+      return defaultUser;
+    }
+    return null;
+  }
+
+  static setAuthUser(user: WarungUser | null): void {
+    if (user) {
+      safeSetItem(STORAGE_KEYS.AUTH_USER, user);
+    } else {
+      try {
+        localStorage.removeItem(STORAGE_KEYS.AUTH_USER);
+      } catch (e) {
+        console.error('Error removing auth user:', e);
+      }
+    }
+  }
+
+  static logout(): void {
+    this.setAuthUser(null);
   }
 
   static addUser(user: WarungUser): WarungUser[] {

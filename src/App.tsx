@@ -9,6 +9,7 @@ import {
   StockMutation,
   SyncState,
   UserRole,
+  WarungUser,
 } from './types';
 import { StorageService } from './services/storage';
 import { GoogleSheetsSyncService } from './services/googleSheetsSync';
@@ -32,12 +33,17 @@ import { CustomerOrderView } from './components/CustomerOrder/CustomerOrderView'
 import { CategoriesView } from './components/Categories/CategoriesView';
 import { UsersManagementView } from './components/Users/UsersManagementView';
 import { OrdersManagementView } from './components/Orders/OrdersManagementView';
+import { ProtectedRoute } from './components/Auth/ProtectedRoute';
+import { LoginModal } from './components/Auth/LoginModal';
+import { UserProfileModal } from './components/Auth/UserProfileModal';
+import { hasTabAccess, normalizeRole, ROLE_CONFIGS } from './utils/rbac';
 import { CheckCircle2, AlertCircle, Info, X, Bot, Sparkles, Bell, ArrowRight } from 'lucide-react';
 import {
   saveOrderToFirebase,
   subscribeToFirebaseOrders,
   updateFirebaseOrderStatus,
   syncProductsToFirebase,
+  subscribeToAuthState,
 } from './services/firebase';
 import { formatRupiah } from './utils/formatters';
 
@@ -121,6 +127,16 @@ export default function App() {
   );
   const [settings, setSettings] = useState<StoreSettings>(() => StorageService.getSettings());
 
+  // User Authentication State & RBAC
+  const [currentUser, setCurrentUser] = useState<WarungUser | null>(() => {
+    const saved = StorageService.getAuthUser();
+    if (saved) return saved;
+    const users = StorageService.getUsers();
+    return users[0] || null;
+  });
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+
   // Sync & Connection State
   const [syncState, setSyncState] = useState<SyncState>(() => StorageService.getSyncState());
   const [isSyncing, setIsSyncing] = useState(false);
@@ -149,13 +165,15 @@ export default function App() {
 
   // Real-time Firebase Orders Sync & Product catalog sync
   useEffect(() => {
-    // Initial sync of products catalog to Firebase so QR customers have all products
-    if (products.length > 0) {
-      syncProductsToFirebase(products).catch(() => {});
-    }
+    // Sync products catalog to Firebase when an Admin/Owner is authenticated
+    const unsubAuth = subscribeToAuthState((user) => {
+      if (user && products.length > 0) {
+        syncProductsToFirebase(products).catch(() => {});
+      }
+    });
 
     // Subscribe to incoming orders in real-time from Firebase Firestore
-    const unsubscribe = subscribeToFirebaseOrders((incomingOrders) => {
+    const unsubscribeOrders = subscribeToFirebaseOrders((incomingOrders) => {
       if (!incomingOrders || incomingOrders.length === 0) return;
 
       setTransactions((prevTxList) => {
@@ -199,9 +217,10 @@ export default function App() {
     });
 
     return () => {
-      unsubscribe();
+      unsubAuth();
+      unsubscribeOrders();
     };
-  }, []);
+  }, [products]);
 
   // Theme Handling
   useEffect(() => {
@@ -241,12 +260,61 @@ export default function App() {
     StorageService.saveSettings(updated);
   };
 
-  // Switch Role (Kasir / Admin)
+  // Switch Role (Owner / Admin / Kasir / Staff / Customer)
   const handleRoleChange = (role: UserRole) => {
-    const updated = { ...settings, role };
-    setSettings(updated);
-    StorageService.saveSettings(updated);
-    showToast(`Beralih ke mode ${role}`, 'info');
+    const updatedSettings = { ...settings, role };
+    setSettings(updatedSettings);
+    StorageService.saveSettings(updatedSettings);
+
+    const users = StorageService.getUsers();
+    const matchedUser = users.find((u) => u.role === role);
+    if (matchedUser) {
+      setCurrentUser(matchedUser);
+      StorageService.setAuthUser(matchedUser);
+      showToast(`Beralih ke sesi akun ${matchedUser.nama} (${role})`, 'success');
+    } else if (currentUser) {
+      const updatedUser: WarungUser = { ...currentUser, role };
+      setCurrentUser(updatedUser);
+      StorageService.setAuthUser(updatedUser);
+      showToast(`Peran akun dialihkan ke ${role}`, 'success');
+    }
+
+    // Auto-redirect if current active tab is not accessible by this role
+    if (!hasTabAccess(role, activeTab)) {
+      const norm = normalizeRole(role);
+      const def = ROLE_CONFIGS[norm].defaultTab;
+      setActiveTab(def);
+    }
+  };
+
+  const handleLoginSuccess = (user: WarungUser) => {
+    setCurrentUser(user);
+    StorageService.setAuthUser(user);
+    setSettings((prev) => {
+      const updated = { ...prev, role: user.role };
+      StorageService.saveSettings(updated);
+      return updated;
+    });
+    showToast(`Selamat datang, ${user.nama}! (${user.role})`, 'success');
+
+    // Auto-navigate to allowed tab if restricted
+    if (!hasTabAccess(user.role, activeTab)) {
+      const norm = normalizeRole(user.role);
+      const def = ROLE_CONFIGS[norm].defaultTab;
+      setActiveTab(def);
+    }
+  };
+
+  const handleLogout = () => {
+    StorageService.logout();
+    setCurrentUser(null);
+    showToast('Anda telah keluar dari akun', 'info');
+    setIsLoginModalOpen(true);
+  };
+
+  const handleUpdateCurrentUser = (updatedUser: WarungUser) => {
+    setCurrentUser(updatedUser);
+    StorageService.setAuthUser(updatedUser);
   };
 
   // Google Sheets Cloud Sync Handler
@@ -441,6 +509,9 @@ export default function App() {
     );
   }
 
+  const effectiveRole = currentUser ? currentUser.role : settings.role;
+  const isTabAuthorized = hasTabAccess(effectiveRole, activeTab);
+
   return (
     <div className="min-h-screen bg-stone-950 text-stone-100 flex flex-col antialiased selection:bg-amber-500 selection:text-black">
       {/* Top Application Header */}
@@ -449,6 +520,10 @@ export default function App() {
         syncState={syncState}
         onSync={handleSync}
         onToggleTheme={handleToggleTheme}
+        currentUser={currentUser}
+        onOpenProfile={() => setIsProfileModalOpen(true)}
+        onOpenLogin={() => setIsLoginModalOpen(true)}
+        onLogout={handleLogout}
         onChangeRole={handleRoleChange}
         onRoleChange={handleRoleChange}
         onOpenAIBot={() => setIsAIDrawerOpen(true)}
@@ -508,8 +583,10 @@ export default function App() {
           activeTab={activeTab}
           onSelectTab={setActiveTab}
           onTabChange={setActiveTab}
-          role={settings.role}
+          role={effectiveRole}
           lowStockCount={lowStockCount}
+          currentUser={currentUser}
+          onOpenProfile={() => setIsProfileModalOpen(true)}
           onOpenLogoEditor={() => setIsLogoEditorOpen(true)}
           logoUrl={settings.logoUrl}
           storeName={settings.storeName}
@@ -517,14 +594,23 @@ export default function App() {
 
         {/* Dynamic Views Viewport */}
         <main className="flex-1 flex flex-col overflow-y-auto min-h-0 bg-stone-950 pb-24 lg:pb-6">
-          {activeTab === 'pos' && (
-            <POSView
-              products={products}
-              settings={settings}
-              onTransactionCompleted={handleTransactionCompleted}
-              showToast={showToast}
+          {!isTabAuthorized ? (
+            <ProtectedRoute
+              activeTab={activeTab}
+              userRole={effectiveRole}
+              onSwitchAccount={() => setIsLoginModalOpen(true)}
+              onNavigate={setActiveTab}
             />
-          )}
+          ) : (
+            <>
+              {activeTab === 'pos' && (
+                <POSView
+                  products={products}
+                  settings={settings}
+                  onTransactionCompleted={handleTransactionCompleted}
+                  showToast={showToast}
+                />
+              )}
 
           {activeTab === 'dashboard' && (
             <DashboardView
@@ -640,12 +726,15 @@ export default function App() {
           {activeTab === 'settings' && (
             <SettingsView
               settings={settings}
+              products={products}
               onSaveSettings={handleSaveSettings}
               onSyncNow={handleSync}
               isSyncing={isSyncing}
               onResetData={handleResetData}
               showToast={showToast}
             />
+          )}
+            </>
           )}
         </main>
       </div>
@@ -694,6 +783,27 @@ export default function App() {
           }}
         />
       )}
+
+      {/* RBAC Login Modal */}
+      <LoginModal
+        isOpen={isLoginModalOpen}
+        onClose={() => setIsLoginModalOpen(false)}
+        onLoginSuccess={handleLoginSuccess}
+      />
+
+      {/* RBAC User Profile & Role Permissions Matrix Modal */}
+      <UserProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => setIsProfileModalOpen(false)}
+        currentUser={currentUser}
+        onUpdateUser={handleUpdateCurrentUser}
+        onSwitchUser={handleLoginSuccess}
+        onLogout={handleLogout}
+        onOpenLogin={() => {
+          setIsProfileModalOpen(false);
+          setIsLoginModalOpen(true);
+        }}
+      />
 
       {/* Floating Toast Notification */}
       {toast && (

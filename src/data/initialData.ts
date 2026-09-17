@@ -548,49 +548,91 @@ export const INITIAL_USERS: Array<{
   id: string;
   nama: string;
   username: string;
-  role: 'ADMIN' | 'KASIR';
+  email?: string;
+  role: 'Owner' | 'Admin' | 'Kasir' | 'Staff' | 'Customer';
   pin: string;
   no_hp?: string;
+  avatar_url?: string;
   status: 'Aktif' | 'Nonaktif';
   total_transaksi?: number;
   total_omset?: number;
   terakhir_aktif?: string;
+  created_at?: string;
 }> = [
   {
     id: 'USR-001',
     nama: 'Bang Kobra (Owner)',
-    username: 'admin',
-    role: 'ADMIN',
+    username: 'owner',
+    email: 'bangkobra@warungkobra.com',
+    role: 'Owner',
     pin: '1234',
     no_hp: '0812-9876-5432',
+    avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
     status: 'Aktif',
-    total_transaksi: 142,
-    total_omset: 3850000,
-    terakhir_aktif: 'Hari ini, 19:30',
+    total_transaksi: 184,
+    total_omset: 4950000,
+    terakhir_aktif: 'Sedang Aktif',
+    created_at: '2026-01-01T08:00:00Z',
   },
   {
     id: 'USR-002',
-    nama: 'Siti Rahma (Kasir Shift 1)',
-    username: 'kasir1',
-    role: 'KASIR',
-    pin: '1111',
-    no_hp: '0857-1122-3344',
+    nama: 'Rina Wijaya (Admin Warung)',
+    username: 'admin',
+    email: 'rina.admin@warungkobra.com',
+    role: 'Admin',
+    pin: '1234',
+    no_hp: '0813-2233-4455',
+    avatar_url: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&auto=format&fit=crop&q=80',
     status: 'Aktif',
-    total_transaksi: 85,
-    total_omset: 1720000,
-    terakhir_aktif: 'Hari ini, 15:00',
+    total_transaksi: 96,
+    total_omset: 2450000,
+    terakhir_aktif: 'Hari ini, 19:30',
+    created_at: '2026-02-15T08:00:00Z',
   },
   {
     id: 'USR-003',
-    nama: 'Budi Santoso (Kasir Shift 2)',
-    username: 'kasir2',
-    role: 'KASIR',
-    pin: '2222',
-    no_hp: '0878-5566-7788',
+    nama: 'Siti Rahma (Kasir Shift 1)',
+    username: 'kasir',
+    email: 'siti.kasir@warungkobra.com',
+    role: 'Kasir',
+    pin: '1111',
+    no_hp: '0857-1122-3344',
+    avatar_url: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
     status: 'Aktif',
-    total_transaksi: 48,
-    total_omset: 980000,
-    terakhir_aktif: 'Sedang Aktif',
+    total_transaksi: 142,
+    total_omset: 3820000,
+    terakhir_aktif: 'Hari ini, 15:00',
+    created_at: '2026-03-01T08:00:00Z',
+  },
+  {
+    id: 'USR-004',
+    nama: 'Pak Darto (Staff Dapur & Logistik)',
+    username: 'staff',
+    email: 'darto.dapur@warungkobra.com',
+    role: 'Staff',
+    pin: '3333',
+    no_hp: '0878-5566-7788',
+    avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+    status: 'Aktif',
+    total_transaksi: 38,
+    total_omset: 680000,
+    terakhir_aktif: 'Kemarin, 21:00',
+    created_at: '2026-04-10T08:00:00Z',
+  },
+  {
+    id: 'USR-005',
+    nama: 'Ahmad Santoso (Pelanggan VIP)',
+    username: 'customer',
+    email: 'ahmad.santoso@gmail.com',
+    role: 'Customer',
+    pin: '0000',
+    no_hp: '0812-3344-5566',
+    avatar_url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
+    status: 'Aktif',
+    total_transaksi: 12,
+    total_omset: 340000,
+    terakhir_aktif: 'Hari ini, 12:15',
+    created_at: '2026-06-01T08:00:00Z',
   },
 ];
 

@@ -20,8 +20,11 @@ import {
   Image as ImageIcon,
   Shield,
   ChevronRight,
+  Lock,
+  User,
 } from 'lucide-react';
-import { ActiveTab, UserRole } from '../types';
+import { ActiveTab, UserRole, WarungUser } from '../types';
+import { hasTabAccess, normalizeRole, getRoleBadgeInfo } from '../utils/rbac';
 
 interface NavigationProps {
   activeTab: ActiveTab;
@@ -29,6 +32,8 @@ interface NavigationProps {
   onTabChange?: (tab: ActiveTab) => void;
   role: UserRole;
   lowStockCount: number;
+  currentUser?: WarungUser | null;
+  onOpenProfile?: () => void;
   onOpenLogoEditor?: () => void;
   logoUrl?: string;
   storeName?: string;
@@ -40,11 +45,16 @@ export const Navigation: React.FC<NavigationProps> = ({
   onTabChange,
   role,
   lowStockCount,
+  currentUser,
+  onOpenProfile,
   onOpenLogoEditor,
   logoUrl,
   storeName,
 }) => {
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
+
+  const effectiveRole = currentUser ? currentUser.role : role;
+  const roleBadge = getRoleBadgeInfo(effectiveRole);
 
   const handleSelectTab = (tab: ActiveTab) => {
     if (typeof onSelectTab === 'function') {
@@ -127,6 +137,7 @@ export const Navigation: React.FC<NavigationProps> = ({
           const isActive =
             activeTab === item.id ||
             (item.id === 'orders' && activeTab === 'whatsapp_order');
+          const isAllowed = hasTabAccess(effectiveRole, item.id);
 
           return (
             <button
@@ -137,39 +148,94 @@ export const Navigation: React.FC<NavigationProps> = ({
               className={`w-full min-h-[44px] flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-sm font-extrabold transition-all cursor-pointer ${
                 isActive
                   ? 'bg-red-600 text-white shadow-lg shadow-red-950/60 border border-red-500/60 scale-[1.01]'
-                  : 'text-stone-300 hover:text-white hover:bg-stone-900 border border-transparent'
+                  : isAllowed
+                  ? 'text-stone-300 hover:text-white hover:bg-stone-900 border border-transparent'
+                  : 'text-stone-500 hover:text-stone-300 hover:bg-stone-900/50 border border-transparent opacity-75'
               }`}
             >
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 min-w-0">
                 <Icon
                   className={`w-5 h-5 shrink-0 ${
-                    isActive ? 'text-white' : 'text-orange-500/80 group-hover:text-orange-400'
+                    isActive
+                      ? 'text-white'
+                      : isAllowed
+                      ? 'text-orange-500/80 group-hover:text-orange-400'
+                      : 'text-stone-500'
                   }`}
                 />
                 <span className="truncate">{item.label}</span>
               </div>
 
-              {item.badge && item.badge > 0 ? (
-                <span className="px-2 py-0.5 text-[10px] font-black rounded-full bg-orange-500 text-stone-950 shadow-sm animate-pulse">
-                  {item.badge}
-                </span>
-              ) : item.badgeText ? (
-                <span
-                  className={`px-2 py-0.5 text-[10px] font-black rounded-full uppercase ${
-                    isActive
-                      ? 'bg-black text-orange-400'
-                      : 'bg-orange-500/20 text-orange-400 border border-orange-500/40'
-                  }`}
-                >
-                  {item.badgeText}
-                </span>
-              ) : null}
+              <div className="flex items-center gap-1.5 shrink-0 ml-1">
+                {!isAllowed && (
+                  <span
+                    title="Hak akses peran terbatas untuk halaman ini"
+                    className="p-1 rounded-lg bg-stone-900/80 border border-stone-800 text-stone-400"
+                  >
+                    <Lock className="w-3 h-3" />
+                  </span>
+                )}
+                {item.badge && item.badge > 0 ? (
+                  <span className="px-2 py-0.5 text-[10px] font-black rounded-full bg-orange-500 text-stone-950 shadow-sm animate-pulse">
+                    {item.badge}
+                  </span>
+                ) : item.badgeText ? (
+                  <span
+                    className={`px-2 py-0.5 text-[10px] font-black rounded-full uppercase ${
+                      isActive
+                        ? 'bg-black text-orange-400'
+                        : 'bg-orange-500/20 text-orange-400 border border-orange-500/40'
+                    }`}
+                  >
+                    {item.badgeText}
+                  </span>
+                ) : null}
+              </div>
             </button>
           );
         })}
 
-        {/* Sidebar Footer: Warung Brand & Edit Logo */}
+        {/* Sidebar Footer: Warung Brand & Active User Profile */}
         <div className="mt-auto pt-3 border-t border-stone-800 space-y-2">
+          {currentUser && (
+            <button
+              type="button"
+              id="btn-sidebar-user-card"
+              onClick={onOpenProfile}
+              title="Klik untuk membuka Profil & Hak Akses"
+              className="w-full p-2.5 rounded-2xl bg-stone-900/90 hover:bg-stone-850 border border-stone-800 flex items-center justify-between transition cursor-pointer text-left group"
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-xl overflow-hidden bg-stone-800 border border-stone-700 shrink-0">
+                  {currentUser.avatar_url ? (
+                    <img
+                      src={currentUser.avatar_url}
+                      alt={currentUser.nama}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center font-black text-stone-300 text-xs">
+                      {currentUser.nama.charAt(0)}
+                    </div>
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-black text-stone-200 truncate group-hover:text-white">
+                    {currentUser.nama}
+                  </p>
+                  <p className="text-[10px] text-stone-400 font-mono truncate">
+                    @{currentUser.username}
+                  </p>
+                </div>
+              </div>
+              <span
+                className={`px-2 py-0.5 rounded-full text-[10px] font-black border shrink-0 ${roleBadge.badgeBg} ${roleBadge.badgeText} ${roleBadge.badgeBorder}`}
+              >
+                {roleBadge.badge}
+              </span>
+            </button>
+          )}
+
           <div className="p-3 rounded-2xl bg-stone-900 border border-stone-800 space-y-2.5">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-xl overflow-hidden bg-red-600 flex items-center justify-center shrink-0 border border-red-500/40">
@@ -184,12 +250,12 @@ export const Navigation: React.FC<NavigationProps> = ({
                   {storeName || 'Warung Modern'}
                 </p>
                 <p className="text-[10px] text-orange-400 font-semibold">
-                  {role === 'ADMIN' ? 'Akses Admin' : 'Akses Kasir'}
+                  Role: {roleBadge.title}
                 </p>
               </div>
             </div>
 
-            {onOpenLogoEditor && role === 'ADMIN' && (
+            {onOpenLogoEditor && (role === 'ADMIN' || effectiveRole === 'Owner' || effectiveRole === 'Admin') && (
               <button
                 type="button"
                 id="btn-sidebar-edit-logo"
@@ -312,6 +378,7 @@ export const Navigation: React.FC<NavigationProps> = ({
               {drawerNavItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = activeTab === item.id;
+                const isAllowed = hasTabAccess(effectiveRole, item.id);
 
                 return (
                   <button
@@ -325,7 +392,9 @@ export const Navigation: React.FC<NavigationProps> = ({
                     className={`w-full min-h-[58px] flex items-center justify-between p-3.5 rounded-2xl text-left border-2 transition-all cursor-pointer active:scale-98 ${
                       isActive
                         ? 'bg-red-600/20 border-red-600 text-white shadow-md'
-                        : 'bg-stone-950 hover:bg-stone-800/80 border-stone-800 text-stone-200'
+                        : isAllowed
+                        ? 'bg-stone-950 hover:bg-stone-800/80 border-stone-800 text-stone-200'
+                        : 'bg-stone-950/60 hover:bg-stone-900 border-stone-850 text-stone-400 opacity-70'
                     }`}
                   >
                     <div className="flex items-center gap-3 min-w-0">
@@ -333,14 +402,19 @@ export const Navigation: React.FC<NavigationProps> = ({
                         className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
                           isActive
                             ? 'bg-red-600 text-white shadow-md shadow-red-900/40'
-                            : 'bg-stone-900 text-orange-400 border border-stone-800'
+                            : isAllowed
+                            ? 'bg-stone-900 text-orange-400 border border-stone-800'
+                            : 'bg-stone-900 text-stone-500 border border-stone-800'
                         }`}
                       >
                         <Icon className="w-5 h-5" />
                       </div>
                       <div className="min-w-0">
-                        <div className="font-extrabold text-sm text-white truncate">
-                          {item.label}
+                        <div className="font-extrabold text-sm text-white truncate flex items-center gap-1.5">
+                          <span>{item.label}</span>
+                          {!isAllowed && (
+                            <Lock className="w-3 h-3 text-stone-500 shrink-0" />
+                          )}
                         </div>
                         <div className="text-[11px] text-stone-400 truncate">
                           {item.desc}
@@ -349,7 +423,11 @@ export const Navigation: React.FC<NavigationProps> = ({
                     </div>
 
                     <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                      {item.badge && item.badge > 0 ? (
+                      {!isAllowed ? (
+                        <span className="px-2 py-0.5 text-[10px] font-black rounded-full bg-stone-900 text-stone-500 border border-stone-800">
+                          Terkunci
+                        </span>
+                      ) : item.badge && item.badge > 0 ? (
                         <span className="px-2 py-0.5 text-[10px] font-black rounded-full bg-orange-500 text-stone-950 animate-pulse">
                           {item.badge}
                         </span>

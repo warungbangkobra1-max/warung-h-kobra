@@ -16,14 +16,22 @@ import {
   Smartphone,
   Image as ImageIcon,
   Sparkles,
+  Flame,
+  Database,
 } from 'lucide-react';
-import { StoreSettings } from '../../types';
+import { StoreSettings, Product } from '../../types';
 import { GoogleSheetsSyncService } from '../../services/googleSheetsSync';
 import { StorageService } from '../../services/storage';
 import { LogoUploader } from './LogoUploader';
+import {
+  testFirestoreConnection,
+  syncProductsToFirebase,
+  firebaseConfig,
+} from '../../services/firebase';
 
 interface SettingsViewProps {
   settings: StoreSettings;
+  products?: Product[];
   onSaveSettings: (newSettings: StoreSettings) => void;
   onSyncNow: () => void;
   isSyncing: boolean;
@@ -33,6 +41,7 @@ interface SettingsViewProps {
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
   settings,
+  products = [],
   onSaveSettings,
   onSyncNow,
   isSyncing,
@@ -43,6 +52,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   const [isTestingUrl, setIsTestingUrl] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [showGuideModal, setShowGuideModal] = useState(false);
+
+  // Firebase testing and sync states
+  const [isTestingFirebase, setIsTestingFirebase] = useState(false);
+  const [firebaseStatus, setFirebaseStatus] = useState<{
+    success: boolean;
+    message: string;
+  } | null>(null);
+  const [isSyncingFirebaseProducts, setIsSyncingFirebaseProducts] = useState(false);
 
   const handleInputChange = (field: keyof StoreSettings, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -74,6 +91,51 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       onSaveSettings(updated);
     } else {
       showToast(res.message, 'error');
+    }
+  };
+
+  const handleTestFirebase = async () => {
+    setIsTestingFirebase(true);
+    setFirebaseStatus(null);
+    try {
+      const res = await testFirestoreConnection(true);
+      setFirebaseStatus({
+        success: res.connected,
+        message: res.message,
+      });
+      if (res.connected) {
+        showToast('🔥 Firebase Firestore terhubung & siap digunakan!', 'success');
+      } else {
+        showToast(res.message, 'error');
+      }
+    } catch (err: any) {
+      setFirebaseStatus({
+        success: false,
+        message: err?.message || 'Gagal menghubungi Firebase Firestore',
+      });
+      showToast('Gagal menghubungi Firebase', 'error');
+    } finally {
+      setIsTestingFirebase(false);
+    }
+  };
+
+  const handleSyncFirebaseProducts = async () => {
+    if (!products || products.length === 0) {
+      showToast('Tidak ada data produk untuk disinkronkan ke Firebase.', 'info');
+      return;
+    }
+    setIsSyncingFirebaseProducts(true);
+    try {
+      const ok = await syncProductsToFirebase(products);
+      if (ok) {
+        showToast(`Katalog ${products.length} menu berhasil disinkronkan ke Firebase Firestore!`, 'success');
+      } else {
+        showToast('Gagal menyinkronkan menu ke Firebase.', 'error');
+      }
+    } catch (e: any) {
+      showToast(e?.message || 'Error sinkronisasi produk ke Firebase', 'error');
+    } finally {
+      setIsSyncingFirebaseProducts(false);
     }
   };
 
@@ -226,7 +288,107 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
         </div>
 
-        {/* Section 2: Integrasi Google Sheets Backend */}
+        {/* Section 2: Realtime Cloud Database (Firebase Firestore) */}
+        <div className="bg-stone-900 border border-orange-500/30 rounded-3xl p-6 space-y-4 shadow-xl relative overflow-hidden">
+          <div className="flex items-center justify-between pb-3 border-b border-stone-800">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-xl bg-orange-500/20 border border-orange-500/40 flex items-center justify-center text-orange-400">
+                <Flame className="w-4 h-4 text-orange-400 animate-pulse" />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-stone-100 text-base flex items-center gap-2">
+                  <span>Firebase Cloud Firestore</span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                    Terhubung & Aktif
+                  </span>
+                </h3>
+                <p className="text-[11px] text-stone-400">
+                  Sinkronisasi pesanan QR Code langsung (live realtime) ke layar kasir & katalog menu di HP pelanggan.
+                </p>
+              </div>
+            </div>
+            <div className="hidden sm:flex items-center gap-2">
+              <span className="text-[11px] text-stone-400 font-mono">
+                Project: <strong className="text-orange-400">{firebaseConfig.projectId}</strong>
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div className="p-3.5 rounded-2xl bg-stone-950 border border-stone-800 space-y-1">
+              <div className="text-stone-400 font-bold text-[11px] flex items-center gap-1.5">
+                <Database className="w-3.5 h-3.5 text-orange-400" />
+                <span>Firestore Database ID</span>
+              </div>
+              <div className="font-mono text-stone-200 text-[11px] truncate select-all">
+                {firebaseConfig.firestoreDatabaseId || '(default)'}
+              </div>
+            </div>
+
+            <div className="p-3.5 rounded-2xl bg-stone-950 border border-stone-800 space-y-1">
+              <div className="text-stone-400 font-bold text-[11px] flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Realtime Order Listener</span>
+              </div>
+              <div className="text-emerald-300 font-extrabold text-[11px] flex items-center gap-1">
+                <span>Aktif (Push onSnapshot + Audio Chime)</span>
+              </div>
+            </div>
+          </div>
+
+          {firebaseStatus && (
+            <div
+              className={`p-3 rounded-xl border text-xs flex items-center gap-2 ${
+                firebaseStatus.success
+                  ? 'bg-emerald-950/40 border-emerald-800 text-emerald-300'
+                  : 'bg-rose-950/40 border-rose-800 text-rose-300'
+              }`}
+            >
+              {firebaseStatus.success ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+              ) : (
+                <XCircle className="w-4 h-4 text-rose-400 shrink-0" />
+              )}
+              <span>{firebaseStatus.message}</span>
+            </div>
+          )}
+
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+            <div className="text-[11px] text-stone-400 flex items-center gap-1.5">
+              <span>Status:</span>
+              <span className="text-stone-200 font-semibold">
+                Pesanan Takeaway/Delivery dari QR Code langsung tersimpan ke Cloud
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                id="btn-test-firebase"
+                onClick={handleTestFirebase}
+                disabled={isTestingFirebase}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-stone-800 hover:bg-stone-700 text-stone-200 text-xs font-bold transition disabled:opacity-50 cursor-pointer"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isTestingFirebase ? 'animate-spin text-orange-400' : 'text-orange-400'}`} />
+                <span>{isTestingFirebase ? 'Memeriksa...' : 'Tes Koneksi Firebase'}</span>
+              </button>
+
+              <button
+                type="button"
+                id="btn-sync-firebase-products"
+                onClick={handleSyncFirebaseProducts}
+                disabled={isSyncingFirebaseProducts}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-extrabold transition shadow-md shadow-orange-950/40 active:scale-95 disabled:opacity-50 cursor-pointer"
+              >
+                <Flame className={`w-3.5 h-3.5 ${isSyncingFirebaseProducts ? 'animate-spin' : ''}`} />
+                <span>{isSyncingFirebaseProducts ? 'Menyinkronkan...' : 'Sinkronkan Menu ke Firebase'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Section 3: Integrasi Google Sheets Backend */}
         <div className="bg-stone-900 border border-stone-800 rounded-3xl p-6 space-y-4 shadow-xl">
           <div className="flex items-center justify-between pb-2 border-b border-stone-800">
             <div className="flex items-center gap-2">

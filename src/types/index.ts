@@ -1,6 +1,13 @@
 export type ProductCategory = 'Makanan' | 'Minuman' | 'Snack' | 'Tambahan' | 'Lainnya';
 export type PaymentMethod = 'Cash' | 'QRIS' | 'Transfer' | 'E-wallet' | 'Lainnya';
-export type UserRole = 'ADMIN' | 'KASIR';
+export type UserRole =
+  | 'Owner'
+  | 'Admin'
+  | 'Kasir'
+  | 'Staff'
+  | 'Customer'
+  | 'ADMIN'
+  | 'KASIR';
 export type ExpenseCategory = 'Pembelian bahan' | 'Listrik' | 'Gas' | 'Operasional' | 'Gaji' | 'Lainnya';
 
 export interface Product {
@@ -169,14 +176,19 @@ export interface WarungUser {
   id: string;
   nama: string;
   username: string;
+  email?: string;
   role: UserRole;
   pin: string;
   no_hp?: string;
+  avatar_url?: string;
   status: 'Aktif' | 'Nonaktif';
   total_transaksi?: number;
   total_omset?: number;
   terakhir_aktif?: string;
+  created_at?: string;
 }
+
+export type AuthUser = WarungUser;
 
 export interface ChatMessage {
   id: string;
