@@ -15,29 +15,45 @@ import {
   getRoleBadgeInfo,
   getAllowedRolesForTab,
   getDefaultTabForRole,
+  getTabLabel,
 } from '../../utils/rbac';
 
 interface ProtectedRouteProps {
-  currentUser: WarungUser | null;
-  currentTab: ActiveTab;
-  tabLabel: string;
+  currentUser?: WarungUser | null;
+  currentTab?: ActiveTab;
+  activeTab?: ActiveTab;
+  userRole?: string;
+  tabLabel?: string;
   onNavigate: (tab: ActiveTab) => void;
-  onOpenLogin: () => void;
-  onOpenProfile: () => void;
+  onOpenLogin?: () => void;
+  onSwitchAccount?: () => void;
+  onOpenProfile?: () => void;
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   currentUser,
   currentTab,
+  activeTab,
+  userRole,
   tabLabel,
   onNavigate,
   onOpenLogin,
-  onOpenProfile,
+  onSwitchAccount,
+  onOpenProfile = () => {},
 }) => {
-  const currentRole = currentUser ? normalizeRole(currentUser.role) : 'Guest';
-  const roleConfig = getRoleBadgeInfo(currentRole);
-  const allowedRoles = getAllowedRolesForTab(currentTab);
-  const defaultTab = currentUser ? getDefaultTabForRole(currentUser.role) : 'qrcode_order';
+  const effectiveTab = currentTab || activeTab || 'pos';
+  const effectiveRole = currentUser
+    ? normalizeRole(currentUser.role)
+    : userRole
+    ? normalizeRole(userRole)
+    : 'Kasir';
+  const roleConfig = getRoleBadgeInfo(effectiveRole);
+  const allowedRoles = getAllowedRolesForTab(effectiveTab);
+  const defaultTab = currentUser
+    ? getDefaultTabForRole(currentUser.role)
+    : getDefaultTabForRole(effectiveRole);
+  const effectiveLabel = tabLabel || getTabLabel(effectiveTab);
+  const handleOpenLogin = onOpenLogin || onSwitchAccount || (() => {});
 
   return (
     <div className="min-h-[70vh] flex items-center justify-center p-4">
@@ -64,7 +80,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
             Izin Akses Diperlukan
           </h2>
           <p className="text-xs sm:text-sm text-stone-300 leading-relaxed">
-            Halaman <strong className="text-white bg-stone-800 px-2 py-0.5 rounded-md">{tabLabel}</strong>{' '}
+            Halaman <strong className="text-white bg-stone-800 px-2 py-0.5 rounded-md">{effectiveLabel}</strong>{' '}
             memerlukan hak akses khusus dan tidak tersedia untuk peran Anda saat ini.
           </p>
         </div>
@@ -146,7 +162,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
           <button
             type="button"
             id="btn-rbac-switch-account"
-            onClick={onOpenLogin}
+            onClick={handleOpenLogin}
             className="w-full sm:flex-1 min-h-[44px] px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-extrabold transition shadow-lg shadow-red-950/50 flex items-center justify-center gap-2 cursor-pointer active:scale-95"
           >
             <Key className="w-4 h-4" />

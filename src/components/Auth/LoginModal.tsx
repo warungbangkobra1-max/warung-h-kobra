@@ -31,10 +31,10 @@ import {
 interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
-  currentUser: WarungUser | null;
-  settings: StoreSettings;
+  currentUser?: WarungUser | null;
+  settings?: StoreSettings;
   onLoginSuccess: (user: WarungUser) => void;
-  showToast: (msg: string, type?: 'success' | 'error' | 'info') => void;
+  showToast?: (msg: string, type?: 'success' | 'error' | 'info') => void;
   isMandatory?: boolean;
 }
 
@@ -44,7 +44,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   currentUser,
   settings,
   onLoginSuccess,
-  showToast,
+  showToast = (_msg: string, _type?: 'success' | 'error' | 'info') => {},
   isMandatory = false,
 }) => {
   const [activeTab, setActiveTab] = useState<'quick_demo' | 'form_login' | 'register_customer'>('quick_demo');

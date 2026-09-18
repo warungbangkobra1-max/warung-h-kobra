@@ -36,7 +36,7 @@ import { OrdersManagementView } from './components/Orders/OrdersManagementView';
 import { ProtectedRoute } from './components/Auth/ProtectedRoute';
 import { LoginModal } from './components/Auth/LoginModal';
 import { UserProfileModal } from './components/Auth/UserProfileModal';
-import { hasTabAccess, normalizeRole, ROLE_CONFIGS } from './utils/rbac';
+import { hasTabAccess, normalizeRole, ROLE_CONFIGS, getTabLabel } from './utils/rbac';
 import { CheckCircle2, AlertCircle, Info, X, Bot, Sparkles, Bell, ArrowRight } from 'lucide-react';
 import {
   saveOrderToFirebase,
@@ -254,8 +254,8 @@ export default function App() {
 
   // Toggle Theme
   const handleToggleTheme = () => {
-    const newTheme = settings.theme === 'dark' ? 'light' : 'dark';
-    const updated = { ...settings, theme: newTheme };
+    const newTheme: 'dark' | 'light' = settings.theme === 'dark' ? 'light' : 'dark';
+    const updated: StoreSettings = { ...settings, theme: newTheme };
     setSettings(updated);
     StorageService.saveSettings(updated);
   };
@@ -596,9 +596,14 @@ export default function App() {
         <main className="flex-1 flex flex-col overflow-y-auto min-h-0 bg-stone-950 pb-24 lg:pb-6">
           {!isTabAuthorized ? (
             <ProtectedRoute
+              currentUser={currentUser}
+              currentTab={activeTab}
               activeTab={activeTab}
               userRole={effectiveRole}
+              tabLabel={getTabLabel(activeTab)}
+              onOpenLogin={() => setIsLoginModalOpen(true)}
               onSwitchAccount={() => setIsLoginModalOpen(true)}
+              onOpenProfile={() => setIsProfileModalOpen(true)}
               onNavigate={setActiveTab}
             />
           ) : (
@@ -788,22 +793,29 @@ export default function App() {
       <LoginModal
         isOpen={isLoginModalOpen}
         onClose={() => setIsLoginModalOpen(false)}
+        currentUser={currentUser}
+        settings={settings}
+        showToast={showToast}
         onLoginSuccess={handleLoginSuccess}
       />
 
       {/* RBAC User Profile & Role Permissions Matrix Modal */}
-      <UserProfileModal
-        isOpen={isProfileModalOpen}
-        onClose={() => setIsProfileModalOpen(false)}
-        currentUser={currentUser}
-        onUpdateUser={handleUpdateCurrentUser}
-        onSwitchUser={handleLoginSuccess}
-        onLogout={handleLogout}
-        onOpenLogin={() => {
-          setIsProfileModalOpen(false);
-          setIsLoginModalOpen(true);
-        }}
-      />
+      {currentUser && (
+        <UserProfileModal
+          isOpen={isProfileModalOpen}
+          onClose={() => setIsProfileModalOpen(false)}
+          currentUser={currentUser}
+          settings={settings}
+          showToast={showToast}
+          onUpdateUser={handleUpdateCurrentUser}
+          onSwitchUser={handleLoginSuccess}
+          onLogout={handleLogout}
+          onOpenLogin={() => {
+            setIsProfileModalOpen(false);
+            setIsLoginModalOpen(true);
+          }}
+        />
+      )}
 
       {/* Floating Toast Notification */}
       {toast && (

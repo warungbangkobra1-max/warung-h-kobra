@@ -241,3 +241,100 @@ export function openWhatsAppChat(phoneNumber: string, message: string): void {
     : `https://api.whatsapp.com/send?text=${encodedText}`;
   window.open(url, '_blank');
 }
+
+/**
+ * Format nomor antrian Takeaway ringkas (misal: TK-01, TK-02)
+ */
+export function getTakeawayQueueNumber(tx: { id_transaksi: string; created_at?: string }): string {
+  if (!tx || !tx.id_transaksi) return 'TK-01';
+  const parts = tx.id_transaksi.split('-');
+  const lastPart = parts[parts.length - 1];
+  const num = parseInt(lastPart, 10);
+  if (!isNaN(num)) {
+    return `TK-${String(num).padStart(2, '0')}`;
+  }
+  const digits = tx.id_transaksi.replace(/\D/g, '').slice(-2);
+  return `TK-${digits || '01'}`;
+}
+
+/**
+ * Mainkan nada lonceng antrian yang jernih (Web Audio API)
+ */
+export function playQueueChimeSound(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const now = ctx.currentTime;
+
+    const playTone = (freq: number, start: number, duration: number) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, start);
+      gain.gain.setValueAtTime(0.3, start);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(start);
+      osc.stop(start + duration);
+    };
+
+    // Ding-dong chime sequence
+    playTone(659.25, now, 0.4); // E5
+    playTone(523.25, now + 0.15, 0.6); // C5
+  } catch (err) {
+    console.warn('Audio chime error:', err);
+  }
+}
+
+/**
+ * Panggil nomor antrian menggunakan suara bahasa Indonesia (SpeechSynthesis)
+ */
+export function callTakeawayQueueVoice(queueNo: string, customerName?: string): void {
+  if (typeof window === 'undefined') return;
+
+  playQueueChimeSound();
+
+  if (!('speechSynthesis' in window)) return;
+
+  try {
+    window.speechSynthesis.cancel();
+    const cleanQueue = queueNo.replace('-', ' ');
+    const namePart = customerName && customerName.trim() && customerName !== 'Pelanggan Umum'
+      ? `atas nama ${customerName.trim()}, `
+      : '';
+    const text = `Nomor antrian ${cleanQueue}, ${namePart}pesanan bungkus sudah siap diambil di kasir. Terima kasih.`;
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'id-ID';
+    utterance.rate = 0.92;
+    utterance.pitch = 1.05;
+
+    // Wait slightly for chime to finish
+    setTimeout(() => {
+      window.speechSynthesis.speak(utterance);
+    }, 450);
+  } catch (err) {
+    console.warn('Speech synthesis error:', err);
+  }
+}
+
+/**
+ * Format pesan WhatsApp konfirmasi pesanan takeaway siap diambil
+ */
+export function buildTakeawayReadyWhatsAppMessage(
+  customerName: string,
+  queueNo: string,
+  storeName: string
+): string {
+  const name = customerName && customerName !== 'Pelanggan Umum' ? customerName : 'Kak';
+  return (
+    `Halo ${name} 👋\n\n` +
+    `Kabar gembira! Pesanan Takeaway (Bungkus) Anda dengan *Nomor Antrian: ${queueNo}* di *${storeName}* SUDAH SIAP DIAMBIL di meja kasir. 🥡✨\n\n` +
+    `Silakan tunjukkan pesan ini atau sebutkan nomor antrian Anda ke kasir.\n` +
+    `Terima kasih dan selamat menikmati hidangan kami! 🙏`
+  );
+}
+

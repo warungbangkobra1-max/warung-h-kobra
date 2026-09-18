@@ -17,10 +17,20 @@ import {
   Calendar,
   Layers,
   Store,
+  Flame,
+  Volume2,
 } from 'lucide-react';
 import { Transaction, Product, StoreSettings } from '../../types';
-import { formatRupiah, formatDateIndo } from '../../utils/formatters';
+import {
+  formatRupiah,
+  formatDateIndo,
+  getTakeawayQueueNumber,
+  callTakeawayQueueVoice,
+  buildTakeawayReadyWhatsAppMessage,
+  openWhatsAppChat,
+} from '../../utils/formatters';
 import { WhatsAppOrderView } from '../WhatsApp/WhatsAppOrderView';
+import { TakeawayQueueBoard } from './TakeawayQueueBoard';
 import { StorageService } from '../../services/storage';
 
 interface OrdersManagementViewProps {
@@ -42,7 +52,9 @@ export const OrdersManagementView: React.FC<OrdersManagementViewProps> = ({
   showToast,
   onNavigateToQR,
 }) => {
-  const [activeTab, setActiveTab] = useState<'all' | 'takeaway' | 'delivery' | 'create_new'>('all');
+  const [activeTab, setActiveTab] = useState<
+    'takeaway_queue' | 'all' | 'takeaway' | 'delivery' | 'create_new'
+  >('takeaway_queue');
   const [statusFilter, setStatusFilter] = useState<'all' | 'Pending' | 'Diproses' | 'Selesai' | 'Dibatalkan'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
@@ -72,8 +84,13 @@ export const OrdersManagementView: React.FC<OrdersManagementViewProps> = ({
 
   // Counts for Badges
   const pendingCount = transactions.filter((t) => t.status === 'Pending').length;
-  const takeawayCount = transactions.filter((t) => t.tipe_pesanan === 'Takeaway').length;
-  const deliveryCount = transactions.filter((t) => t.tipe_pesanan === 'Delivery').length;
+  const takeawayCount = transactions.filter((t) => t.tipe_pesanan === 'Takeaway' || t.id_transaksi.startsWith('TKW')).length;
+  const activeTakeawayQueueCount = transactions.filter(
+    (t) =>
+      (t.tipe_pesanan === 'Takeaway' || t.id_transaksi.startsWith('TKW')) &&
+      (t.status === 'Pending' || t.status === 'Diproses')
+  ).length;
+  const deliveryCount = transactions.filter((t) => t.tipe_pesanan === 'Delivery' || t.id_transaksi.startsWith('DLV')).length;
 
   const handleUpdateStatus = (
     tx: Transaction,
@@ -178,6 +195,24 @@ export const OrdersManagementView: React.FC<OrdersManagementViewProps> = ({
       <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
         <button
           type="button"
+          onClick={() => setActiveTab('takeaway_queue')}
+          className={`min-h-[44px] px-4 rounded-2xl font-extrabold text-xs whitespace-nowrap transition flex items-center gap-2 cursor-pointer ${
+            activeTab === 'takeaway_queue'
+              ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-stone-950 font-black shadow-lg shadow-orange-950/40'
+              : 'bg-stone-900 text-amber-400 hover:text-white border border-amber-500/40'
+          }`}
+        >
+          <Flame className="w-4 h-4" />
+          <span>Antrian Takeaway (Bungkus)</span>
+          {activeTakeawayQueueCount > 0 && (
+            <span className="px-2 py-0.5 rounded-full text-[10px] bg-stone-950 text-amber-400 font-mono font-black animate-pulse">
+              {activeTakeawayQueueCount} Antre
+            </span>
+          )}
+        </button>
+
+        <button
+          type="button"
           onClick={() => setActiveTab('all')}
           className={`min-h-[44px] px-4 rounded-2xl font-extrabold text-xs whitespace-nowrap transition flex items-center gap-2 cursor-pointer ${
             activeTab === 'all'
@@ -201,7 +236,7 @@ export const OrdersManagementView: React.FC<OrdersManagementViewProps> = ({
           }`}
         >
           <ShoppingBag className="w-4 h-4 text-orange-400" />
-          <span>Takeaway (Bungkus)</span>
+          <span>Riwayat Takeaway</span>
           {takeawayCount > 0 && (
             <span className="px-2 py-0.5 rounded-full text-[10px] bg-orange-500/20 text-orange-400 font-mono">
               {takeawayCount}
@@ -228,36 +263,47 @@ export const OrdersManagementView: React.FC<OrdersManagementViewProps> = ({
         </button>
       </div>
 
-      {/* Filter by Status & Search Bar */}
-      <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
-        <div className="sm:col-span-8 relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-stone-400" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Cari no faktur, nama pelanggan, no WA..."
-            className="w-full min-h-[48px] bg-stone-900 border-2 border-stone-800 focus:border-red-600 rounded-2xl pl-12 pr-4 text-sm text-white placeholder-stone-400 focus:outline-none transition shadow-inner font-medium"
-          />
-        </div>
+      {/* Render Takeaway Queue Board if takeaway_queue is active */}
+      {activeTab === 'takeaway_queue' ? (
+        <TakeawayQueueBoard
+          transactions={transactions}
+          settings={settings}
+          onUpdateStatus={handleUpdateStatus}
+          onPrintReceipt={onPrintReceipt}
+          showToast={showToast}
+        />
+      ) : (
+        <>
+          {/* Filter by Status & Search Bar */}
+          <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
+            <div className="sm:col-span-8 relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-stone-400" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Cari no faktur, nama pelanggan, no WA..."
+                className="w-full min-h-[48px] bg-stone-900 border-2 border-stone-800 focus:border-red-600 rounded-2xl pl-12 pr-4 text-sm text-white placeholder-stone-400 focus:outline-none transition shadow-inner font-medium"
+              />
+            </div>
 
-        <div className="sm:col-span-4 flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
-          {(['all', 'Pending', 'Diproses', 'Selesai'] as const).map((st) => (
-            <button
-              key={st}
-              type="button"
-              onClick={() => setStatusFilter(st)}
-              className={`flex-1 min-h-[44px] px-2 rounded-xl text-xs font-bold transition border whitespace-nowrap cursor-pointer ${
-                statusFilter === st
-                  ? 'bg-stone-800 text-white border-red-600'
-                  : 'bg-stone-900 text-stone-400 border-stone-800 hover:text-white'
-              }`}
-            >
-              {st === 'all' ? 'Semua Status' : st}
-            </button>
-          ))}
-        </div>
-      </div>
+            <div className="sm:col-span-4 flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+              {(['all', 'Pending', 'Diproses', 'Selesai'] as const).map((st) => (
+                <button
+                  key={st}
+                  type="button"
+                  onClick={() => setStatusFilter(st)}
+                  className={`flex-1 min-h-[44px] px-2 rounded-xl text-xs font-bold transition border whitespace-nowrap cursor-pointer ${
+                    statusFilter === st
+                      ? 'bg-stone-800 text-white border-red-600'
+                      : 'bg-stone-900 text-stone-400 border-stone-800 hover:text-white'
+                  }`}
+                >
+                  {st === 'all' ? 'Semua Status' : st}
+                </button>
+              ))}
+            </div>
+          </div>
 
       {/* Orders List / Cards */}
       <div className="space-y-3">
@@ -304,6 +350,11 @@ export const OrdersManagementView: React.FC<OrdersManagementViewProps> = ({
                       <span className="font-mono text-xs font-black text-orange-400">
                         #{tx.id_transaksi}
                       </span>
+                      {isTakeaway && (
+                        <span className="px-2 py-0.5 rounded-lg text-xs font-black bg-amber-500 text-stone-950 font-mono tracking-wide shadow-sm">
+                          {getTakeawayQueueNumber(tx)}
+                        </span>
+                      )}
                       <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-stone-950 text-stone-300 border border-stone-800">
                         {tx.tipe_pesanan || 'Takeaway'}
                       </span>
@@ -442,6 +493,22 @@ export const OrdersManagementView: React.FC<OrdersManagementViewProps> = ({
                     </button>
                   )}
 
+                  {isTakeaway && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const qNo = getTakeawayQueueNumber(tx);
+                        callTakeawayQueueVoice(qNo, tx.nama_pelanggan);
+                        showToast(`Memanggil antrian ${qNo} (${tx.nama_pelanggan})...`, 'info');
+                      }}
+                      className="min-h-[42px] px-3.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-400 font-bold text-xs flex items-center gap-1.5 transition cursor-pointer"
+                      title="Panggil nomor antrian dengan suara"
+                    >
+                      <Volume2 className="w-4 h-4" />
+                      <span>Panggil Suara</span>
+                    </button>
+                  )}
+
                   {tx.no_whatsapp && (
                     <button
                       type="button"
@@ -477,6 +544,8 @@ export const OrdersManagementView: React.FC<OrdersManagementViewProps> = ({
           </div>
         )}
       </div>
+      </>
+      )}
     </div>
   );
 };

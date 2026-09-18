@@ -33,12 +33,13 @@ import {
 interface UserProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
-  currentUser: WarungUser;
-  settings: StoreSettings;
+  currentUser?: WarungUser | null;
+  settings?: StoreSettings;
   onUpdateUser: (updatedUser: WarungUser) => void;
   onLogout: () => void;
   onSwitchUser: (newUser: WarungUser) => void;
-  showToast: (msg: string, type?: 'success' | 'error' | 'info') => void;
+  showToast?: (msg: string, type?: 'success' | 'error' | 'info') => void;
+  onOpenLogin?: () => void;
 }
 
 export const UserProfileModal: React.FC<UserProfileModalProps> = ({
@@ -49,23 +50,34 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   onUpdateUser,
   onLogout,
   onSwitchUser,
-  showToast,
+  showToast = (_msg: string, _type?: 'success' | 'error' | 'info') => {},
+  onOpenLogin,
 }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'permissions' | 'edit_profile' | 'switch_account'>('overview');
 
-  // Edit form state
-  const [editName, setEditName] = useState(currentUser.nama);
-  const [editPhone, setEditPhone] = useState(currentUser.no_hp || '');
-  const [editEmail, setEditEmail] = useState(currentUser.email || '');
+  // Edit form state with safe fallbacks
+  const [editName, setEditName] = useState(currentUser?.nama || '');
+  const [editPhone, setEditPhone] = useState(currentUser?.no_hp || '');
+  const [editEmail, setEditEmail] = useState(currentUser?.email || '');
   const [currentPin, setCurrentPin] = useState('');
   const [newPin, setNewPin] = useState('');
   const [confirmLogout, setConfirmLogout] = useState(false);
 
-  if (!isOpen) return null;
+  // Sync edit form state if currentUser changes
+  React.useEffect(() => {
+    if (currentUser) {
+      setEditName(currentUser.nama || '');
+      setEditPhone(currentUser.no_hp || '');
+      setEditEmail(currentUser.email || '');
+    }
+  }, [currentUser]);
+
+  if (!isOpen || !currentUser) return null;
 
   const currentRole = normalizeRole(currentUser.role);
   const roleConfig = getRoleBadgeInfo(currentRole);
   const allUsers = StorageService.getUsers();
+
 
   const allFeatures: Array<{ id: ActiveTab; label: string; desc: string }> = [
     { id: 'dashboard', label: 'Ringkasan Dashboard', desc: 'Statistik omset harian, grafik penjualan & performa' },
@@ -86,6 +98,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
 
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!currentUser) return;
     if (!editName.trim()) {
       showToast('Nama pengguna tidak boleh kosong!', 'error');
       return;

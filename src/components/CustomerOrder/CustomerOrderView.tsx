@@ -32,6 +32,7 @@ import {
   sanitizeWhatsAppNumber,
   buildOnlineQRCodeOrderWhatsAppMessage,
   openWhatsAppChat,
+  getTakeawayQueueNumber,
 } from '../../utils/formatters';
 import { StorageService } from '../../services/storage';
 import { saveOrderToFirebase, db } from '../../services/firebase';
@@ -397,14 +398,20 @@ export const CustomerOrderView: React.FC<CustomerOrderViewProps> = ({
         <div className="bg-gradient-to-b from-stone-900 to-stone-900/80 border border-stone-800 rounded-3xl p-4 sm:p-5 shadow-xl space-y-4">
           <div className="flex items-start justify-between gap-2">
             <div>
-              <span className="text-[10px] font-extrabold tracking-widest text-amber-400 uppercase bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20">
-                Menu Pesan Mandiri
-              </span>
+              <div className="flex flex-wrap items-center gap-1.5 mb-1">
+                <span className="text-[10px] font-extrabold tracking-widest text-amber-400 uppercase bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20">
+                  Menu Pesan Mandiri
+                </span>
+                <span className="text-[10px] font-extrabold tracking-wide text-emerald-400 bg-emerald-500/15 px-2 py-0.5 rounded-md border border-emerald-500/30 flex items-center gap-1">
+                  <span>📱</span>
+                  <span>Tanpa Perlu Instal Aplikasi</span>
+                </span>
+              </div>
               <h2 className="text-lg sm:text-xl font-black text-stone-100 mt-1">
-                Pesan Tanpa Antre & Cepat
+                Pesan Cukup Arahkan Kamera ke QR
               </h2>
               <p className="text-xs text-stone-400 mt-0.5">
-                Cukup pilih menu favorit Anda di bawah, konfirmasi, dan pesanan langsung disiapkan!
+                Pilih menu favorit Anda langsung di browser HP tanpa install aplikasi. Pesanan langsung masuk ke kasir!
               </p>
             </div>
           </div>
@@ -1014,23 +1021,38 @@ export const CustomerOrderView: React.FC<CustomerOrderViewProps> = ({
             <div className="p-3 bg-stone-950 rounded-2xl border border-stone-800 text-left space-y-2">
               <p className="text-[11px] font-extrabold text-stone-300 uppercase tracking-wider flex items-center gap-1.5">
                 <Radio className="w-3.5 h-3.5 text-orange-400 animate-pulse" />
-                Alur Pemesanan Mandiri
+                Alur Pemesanan Mandiri (Web Browser)
               </p>
               <div className="grid grid-cols-3 gap-1.5 text-center text-[10px]">
                 <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-1.5">
-                  <div className="font-black text-emerald-400">1. Scan & Web</div>
-                  <div className="text-stone-400 text-[9px]">Browser HP</div>
+                  <div className="font-black text-emerald-400">1. Scan Kamera</div>
+                  <div className="text-stone-400 text-[9px]">Tanpa App</div>
                 </div>
                 <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-1.5">
                   <div className="font-black text-emerald-400">2. Firebase</div>
-                  <div className="text-stone-400 text-[9px]">Tersimpan Awan</div>
+                  <div className="text-stone-400 text-[9px]">Otomatis Sync</div>
                 </div>
                 <div className="bg-orange-500/20 border border-orange-500/40 rounded-xl p-1.5">
                   <div className="font-black text-orange-400">3. Kasir Terima</div>
-                  <div className="text-stone-300 text-[9px]">Notifikasi Masuk</div>
+                  <div className="text-stone-300 text-[9px]">Masuk Dapur</div>
                 </div>
               </div>
             </div>
+
+            {orderType === 'Takeaway' && (
+              <div className="p-4 bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-amber-500/20 border-2 border-amber-500/60 rounded-2xl text-center space-y-1 shadow-lg shadow-amber-950/40 animate-in zoom-in-95">
+                <div className="flex items-center justify-center gap-1.5 text-[11px] uppercase font-black tracking-widest text-amber-400">
+                  <BellRing className="w-4 h-4 animate-bounce text-amber-400" />
+                  <span>NOMOR ANTRIAN TAKEAWAY ANDA</span>
+                </div>
+                <div className="text-4xl font-black text-white font-mono tracking-widest py-1 drop-shadow-md">
+                  {getTakeawayQueueNumber(completedOrder.createdOrder)}
+                </div>
+                <p className="text-[11px] text-stone-300">
+                  Simpan nomor ini. Kasir/speaker warung akan memanggil nomor ini saat pesanan selesai dibungkus.
+                </p>
+              </div>
+            )}
 
             <div className="bg-stone-950 p-4 rounded-2xl border border-stone-800 text-left space-y-2 text-xs">
               <div className="flex justify-between">

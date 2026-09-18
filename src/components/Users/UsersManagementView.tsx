@@ -17,10 +17,21 @@ import {
   Coins,
   ShieldAlert,
   Smartphone,
+  ShieldCheck,
+  Check,
+  X,
+  Info,
 } from 'lucide-react';
 import { WarungUser, UserRole, StoreSettings } from '../../types';
 import { StorageService } from '../../services/storage';
 import { formatRupiah } from '../../utils/formatters';
+import {
+  ROLE_CONFIGS,
+  normalizeRole,
+  getRoleBadgeInfo,
+  NormalizedRole,
+  hasTabAccess,
+} from '../../utils/rbac';
 
 interface UsersManagementViewProps {
   settings: StoreSettings;
@@ -34,6 +45,7 @@ export const UsersManagementView: React.FC<UsersManagementViewProps> = ({
   showToast,
 }) => {
   const [users, setUsers] = useState<WarungUser[]>(() => StorageService.getUsers());
+  const [viewTab, setViewTab] = useState<'users' | 'matrix'>('users');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<WarungUser | null>(null);
 
@@ -201,127 +213,342 @@ export const UsersManagementView: React.FC<UsersManagementViewProps> = ({
         </div>
       </div>
 
-      {/* Users Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {users.map((user) => {
-          const isCurrentActive = settings.activeCashier === user.nama;
-          return (
-            <div
-              key={user.id}
-              className={`bg-stone-900 rounded-3xl p-5 border-2 transition-all flex flex-col justify-between space-y-4 shadow-lg ${
-                isCurrentActive
-                  ? 'border-red-600 bg-stone-900/90 ring-2 ring-red-600/30'
-                  : 'border-stone-800 hover:border-stone-700'
-              }`}
-            >
-              <div className="space-y-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`w-11 h-11 rounded-2xl flex items-center justify-center font-black text-base ${
-                        user.role === 'ADMIN'
-                          ? 'bg-red-600 text-white shadow-md shadow-red-900/40'
-                          : 'bg-stone-800 text-orange-400 border border-stone-700'
-                      }`}
+      {/* Sub-Tabs: Daftar Pengguna vs Matriks Hak Akses */}
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            id="tab-users-list"
+            onClick={() => setViewTab('users')}
+            className={`min-h-[42px] px-5 rounded-2xl font-black text-xs transition flex items-center gap-2 cursor-pointer ${
+              viewTab === 'users'
+                ? 'bg-red-600 text-white shadow-lg shadow-red-950/50'
+                : 'bg-stone-900 text-stone-400 hover:text-white border border-stone-800'
+            }`}
+          >
+            <Users className="w-4 h-4" />
+            <span>Daftar Pengguna ({users.length})</span>
+          </button>
+
+          <button
+            type="button"
+            id="tab-rbac-matrix"
+            onClick={() => setViewTab('matrix')}
+            className={`min-h-[42px] px-5 rounded-2xl font-black text-xs transition flex items-center gap-2 cursor-pointer ${
+              viewTab === 'matrix'
+                ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-stone-950 font-black shadow-lg shadow-orange-950/50'
+                : 'bg-stone-900 text-amber-400 hover:text-white border border-amber-500/40'
+            }`}
+          >
+            <ShieldCheck className="w-4 h-4" />
+            <span>Matriks Hak Akses (RBAC)</span>
+          </button>
+        </div>
+
+        <div className="text-xs text-stone-400">
+          {viewTab === 'users' ? 'Atur peran dan PIN login staf' : 'Aturan izin & keamanan sistem'}
+        </div>
+      </div>
+
+      {/* VIEW 1: USERS LIST */}
+      {viewTab === 'users' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {users.map((user) => {
+            const isCurrentActive = settings.activeCashier === user.nama;
+            const roleInfo = getRoleBadgeInfo(user.role);
+            return (
+              <div
+                key={user.id}
+                className={`bg-stone-900 rounded-3xl p-5 border-2 transition-all flex flex-col justify-between space-y-4 shadow-lg ${
+                  isCurrentActive
+                    ? 'border-red-600 bg-stone-900/90 ring-2 ring-red-600/30'
+                    : 'border-stone-800 hover:border-stone-700'
+                }`}
+              >
+                <div className="space-y-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className={`w-11 h-11 rounded-2xl flex items-center justify-center font-black text-base ${roleInfo.badgeBg} ${roleInfo.badgeText} border ${roleInfo.badgeBorder}`}
+                      >
+                        {normalizeRole(user.role) === 'Owner' && <span>👑</span>}
+                        {normalizeRole(user.role) === 'Admin' && <Shield className="w-5 h-5 text-rose-400" />}
+                        {normalizeRole(user.role) === 'Kasir' && <UserCheck className="w-5 h-5 text-orange-400" />}
+                        {normalizeRole(user.role) === 'Staff' && <span>🍳</span>}
+                        {normalizeRole(user.role) === 'Customer' && <span>🛍️</span>}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <h4 className="font-extrabold text-sm sm:text-base text-white">
+                            {user.nama}
+                          </h4>
+                        </div>
+                        <p className="text-xs text-stone-400 font-mono">@{user.username}</p>
+                      </div>
+                    </div>
+
+                    <span
+                      className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase border ${roleInfo.badgeBg} ${roleInfo.badgeText} ${roleInfo.badgeBorder}`}
                     >
-                      {user.role === 'ADMIN' ? (
-                        <Shield className="w-5 h-5" />
-                      ) : (
-                        <UserCheck className="w-5 h-5" />
-                      )}
+                      {roleInfo.badge}
+                    </span>
+                  </div>
+
+                  {/* User Details Stats */}
+                  <div className="grid grid-cols-2 gap-2 text-xs bg-stone-950 p-3 rounded-2xl border border-stone-800/80">
+                    <div>
+                      <span className="text-[10px] text-stone-500 font-bold block">PIN Masuk</span>
+                      <span className="font-mono font-black text-stone-200">•••• ({user.pin})</span>
                     </div>
                     <div>
-                      <div className="flex items-center gap-1.5">
-                        <h4 className="font-extrabold text-sm sm:text-base text-white">
-                          {user.nama}
-                        </h4>
-                      </div>
-                      <p className="text-xs text-stone-400 font-mono">@{user.username}</p>
+                      <span className="text-[10px] text-stone-500 font-bold block">No. WhatsApp</span>
+                      <span className="font-bold text-stone-300 truncate block">
+                        {user.no_hp || '-'}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-stone-500 font-bold block">Total Transaksi</span>
+                      <span className="font-black text-orange-400">{user.total_transaksi || 0} Trx</span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-stone-500 font-bold block">Status</span>
+                      <span
+                        className={`font-black ${
+                          user.status === 'Aktif' ? 'text-emerald-400' : 'text-stone-500'
+                        }`}
+                      >
+                        {user.status}
+                      </span>
                     </div>
                   </div>
-
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase border ${
-                      user.role === 'ADMIN'
-                        ? 'bg-red-950/50 text-red-400 border-red-600/40'
-                        : 'bg-orange-950/40 text-orange-400 border-orange-500/40'
-                    }`}
-                  >
-                    {user.role}
-                  </span>
                 </div>
 
-                {/* User Details Stats */}
-                <div className="grid grid-cols-2 gap-2 text-xs bg-stone-950 p-3 rounded-2xl border border-stone-800/80">
-                  <div>
-                    <span className="text-[10px] text-stone-500 font-bold block">PIN Masuk</span>
-                    <span className="font-mono font-black text-stone-200">•••• ({user.pin})</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-stone-500 font-bold block">No. WhatsApp</span>
-                    <span className="font-bold text-stone-300 truncate block">
-                      {user.no_hp || '-'}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-stone-500 font-bold block">Total Transaksi</span>
-                    <span className="font-black text-orange-400">{user.total_transaksi || 0} Trx</span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-stone-500 font-bold block">Status</span>
-                    <span
-                      className={`font-black ${
-                        user.status === 'Aktif' ? 'text-emerald-400' : 'text-stone-500'
-                      }`}
+                {/* Action Buttons: Big & Touch Friendly */}
+                <div className="space-y-2 pt-2 border-t border-stone-800">
+                  {isCurrentActive ? (
+                    <div className="w-full min-h-[44px] rounded-2xl bg-red-600/20 border border-red-500/40 text-red-400 font-black text-xs flex items-center justify-center gap-2">
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>Sedang Digunakan Saat Ini</span>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => handleSetActiveCashier(user)}
+                      className="w-full min-h-[44px] rounded-2xl bg-stone-800 hover:bg-orange-600 active:scale-95 text-stone-200 hover:text-white font-extrabold text-xs flex items-center justify-center gap-2 transition cursor-pointer border border-stone-700 hover:border-orange-500 shadow-md"
                     >
-                      {user.status}
-                    </span>
+                      <UserCheck className="w-4 h-4 text-orange-400" />
+                      <span>Pilih Kasir Ini</span>
+                    </button>
+                  )}
+
+                  <div className="flex items-center justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEdit(user)}
+                      className="flex-1 min-h-[38px] rounded-xl bg-stone-950 hover:bg-stone-800 text-stone-300 text-xs font-bold flex items-center justify-center gap-1.5 border border-stone-800 transition cursor-pointer"
+                    >
+                      <Edit2 className="w-3.5 h-3.5 text-stone-400" />
+                      <span>Edit Data</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(user)}
+                      className="min-h-[38px] px-3 rounded-xl bg-stone-950 hover:bg-red-950/60 text-stone-400 hover:text-red-400 text-xs font-bold flex items-center justify-center border border-stone-800 transition cursor-pointer"
+                      title="Hapus Pengguna"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 </div>
               </div>
+            );
+          })}
+        </div>
+      )}
 
-              {/* Action Buttons: Big & Touch Friendly */}
-              <div className="space-y-2 pt-2 border-t border-stone-800">
-                {isCurrentActive ? (
-                  <div className="w-full min-h-[44px] rounded-2xl bg-red-600/20 border border-red-500/40 text-red-400 font-black text-xs flex items-center justify-center gap-2">
-                    <CheckCircle2 className="w-4 h-4" />
-                    <span>Sedang Digunakan Saat Ini</span>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => handleSetActiveCashier(user)}
-                    className="w-full min-h-[44px] rounded-2xl bg-stone-800 hover:bg-orange-600 active:scale-95 text-stone-200 hover:text-white font-extrabold text-xs flex items-center justify-center gap-2 transition cursor-pointer border border-stone-700 hover:border-orange-500 shadow-md"
-                  >
-                    <UserCheck className="w-4 h-4 text-orange-400" />
-                    <span>Pilih Kasir Ini</span>
-                  </button>
-                )}
+      {/* VIEW 2: RBAC PERMISSIONS MATRIX */}
+      {viewTab === 'matrix' && (
+        <div className="space-y-6">
+          {/* Matrix Header Card */}
+          <div className="bg-stone-900 border-2 border-stone-800 rounded-3xl p-5 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="text-base sm:text-lg font-black text-white flex items-center gap-2">
+                  <ShieldCheck className="w-5 h-5 text-amber-400" />
+                  <span>Matriks Izin & Pembatasan Hak Akses Warung</span>
+                </h3>
+                <p className="text-xs text-stone-400 mt-0.5">
+                  Sistem keamanan Role-Based Access Control (RBAC) melindungi data laba, modal, dan pengaturan sistem dari pihak yang tidak berwenang.
+                </p>
+              </div>
+              <span className="px-3 py-1 rounded-full text-xs font-black bg-amber-500/10 text-amber-400 border border-amber-500/30 w-fit">
+                Enforced by Security Engine
+              </span>
+            </div>
 
-                <div className="flex items-center justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleOpenEdit(user)}
-                    className="flex-1 min-h-[38px] rounded-xl bg-stone-950 hover:bg-stone-800 text-stone-300 text-xs font-bold flex items-center justify-center gap-1.5 border border-stone-800 transition"
-                  >
-                    <Edit2 className="w-3.5 h-3.5 text-stone-400" />
-                    <span>Edit Data</span>
-                  </button>
+            {/* Matrix Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs text-stone-300 border-collapse">
+                <thead>
+                  <tr className="border-b border-stone-800 bg-stone-950/60 text-stone-400 uppercase text-[10px] tracking-wider">
+                    <th className="py-3 px-4 font-bold">Modul / Fitur POS</th>
+                    <th className="py-3 px-3 text-center font-bold text-amber-400">👑 Owner</th>
+                    <th className="py-3 px-3 text-center font-bold text-rose-400">🛡️ Admin</th>
+                    <th className="py-3 px-3 text-center font-bold text-orange-400">💼 Kasir</th>
+                    <th className="py-3 px-3 text-center font-bold text-emerald-400">🍳 Staff</th>
+                    <th className="py-3 px-3 text-center font-bold text-sky-400">🛍️ Customer</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-stone-800/60 font-medium">
+                  {/* Transaksi POS */}
+                  <tr className="hover:bg-stone-800/40 transition">
+                    <td className="py-3 px-4">
+                      <span className="font-extrabold text-white block">Kasir Penjualan (POS)</span>
+                      <span className="text-[10px] text-stone-500">Input transaksi, cetak struk, kalkulasi bayar</span>
+                    </td>
+                    <td className="py-3 px-3 text-center"><span className="text-emerald-400 font-bold text-sm">✓ Penuh</span></td>
+                    <td className="py-3 px-3 text-center"><span className="text-emerald-400 font-bold text-sm">✓ Penuh</span></td>
+                    <td className="py-3 px-3 text-center"><span className="text-emerald-400 font-bold text-sm">✓ Penuh</span></td>
+                    <td className="py-3 px-3 text-center"><span className="text-stone-600 text-sm">✕</span></td>
+                    <td className="py-3 px-3 text-center"><span className="text-stone-600 text-sm">✕</span></td>
+                  </tr>
 
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(user)}
-                    className="min-h-[38px] px-3 rounded-xl bg-stone-950 hover:bg-red-950/60 text-stone-400 hover:text-red-400 text-xs font-bold flex items-center justify-center border border-stone-800 transition"
-                    title="Hapus Pengguna"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  {/* Antrian Takeaway & Delivery */}
+                  <tr className="hover:bg-stone-800/40 transition bg-stone-950/20">
+                    <td className="py-3 px-4">
+                      <span className="font-extrabold text-white block">Antrian Takeaway & Pesanan</span>
+                      <span className="text-[10px] text-stone-500">Papan antrean bungkus, panggil suara, status masak</span>
+                    </td>
+                    <td className="py-3 px-3 text-center"><span className="text-emerald-400 font-bold text-sm">✓ Penuh</span></td>
+                    <td className="py-3 px-3 text-center"><span className="text-emerald-400 font-bold text-sm">✓ Penuh</span></td>
+                    <td className="py-3 px-3 text-center"><span className="text-emerald-400 font-bold text-sm">✓ Penuh</span></td>
+                    <td className="py-3 px-3 text-center"><span className="text-emerald-400 font-bold text-sm">✓ Pantau</span></td>
+                    <td className="py-3 px-3 text-center"><span className="text-stone-600 text-sm">✕</span></td>
+                  </tr>
+
+                  {/* WhatsApp Order */}
+                  <tr className="hover:bg-stone-800/40 transition">
+                    <td className="py-3 px-4">
+                      <span className="font-extrabold text-white block">Pesanan WhatsApp & Delivery</span>
+                      <span className="text-[10px] text-stone-500">Format chat WA otomatis, kirim struk digital</span>
+                    </td>
+                    <td className="py-3 px-3 text-center"><span className="text-emerald-400 font-bold text-sm">✓</span></td>
+                    <td className="py-3 px-3 text-center"><span className="text-emerald-400 font-bold text-sm">✓</span></td>
+                    <td className="py-3 px-3 text-center"><span className="text-emerald-400 font-bold text-sm">✓</span></td>
+                    <td className="py-3 px-3 text-center"><span className="text-stone-600 text-sm">✕</span></td>
+                    <td className="py-3 px-3 text-center"><span className="text-stone-600 text-sm">✕</span></td>
+                  </tr>
+
+                  {/* Produk & Menu */}
+                  <tr className="hover:bg-stone-800/40 transition bg-stone-950/20">
+                    <td className="py-3 px-4">
+                      <span className="font-extrabold text-white block">Katalog Menu & Harga Jual</span>
+                      <span className="text-[10px] text-stone-500">Tambah menu baru, ubah harga, foto produk</span>
+                    </td>
+                    <td className="py-3 px-3 text-center"><span className="text-emerald-400 font-bold text-sm">✓</span></td>
+                    <td className="py-3 px-3 text-center"><span className="text-emerald-400 font-bold text-sm">✓</span></td>
+                    <td className="py-3 px-3 text-center"><span className="text-stone-500 text-xs">Lihat Saja</span></td>
+                    <td className="py-3 px-3 text-center"><span className="text-stone-600 text-sm">✕</span></td>
+                    <td className="py-3 px-3 text-center"><span className="text-sky-400 text-xs">Katalog QR</span></td>
+                  </tr>
+
+                  {/* Stok & Resep */}
+                  <tr className="hover:bg-stone-800/40 transition">
+                    <td className="py-3 px-4">
+                      <span className="font-extrabold text-white block">Manajemen Stok & Mutasi</span>
+                      <span className="text-[10px] text-stone-500">Opname bahan baku, barang masuk & terbuang</span>
+                    </td>
+                    <td className="py-3 px-3 text-center"><span className="text-emerald-400 font-bold text-sm">✓</span></td>
+                    <td className="py-3 px-3 text-center"><span className="text-emerald-400 font-bold text-sm">✓</span></td>
+                    <td className="py-3 px-3 text-center"><span className="text-stone-600 text-sm">✕</span></td>
+                    <td className="py-3 px-3 text-center"><span className="text-emerald-400 font-bold text-sm">✓ Opname</span></td>
+                    <td className="py-3 px-3 text-center"><span className="text-stone-600 text-sm">✕</span></td>
+                  </tr>
+
+                  {/* Laporan Laba Bersih & Keuangan */}
+                  <tr className="hover:bg-stone-800/40 transition bg-stone-950/20">
+                    <td className="py-3 px-4">
+                      <span className="font-extrabold text-amber-300 block">Laporan Laba Rugi & Modal HPP</span>
+                      <span className="text-[10px] text-stone-500">Margin keuntungan, modal terpakai, ekspor Sheets</span>
+                    </td>
+                    <td className="py-3 px-3 text-center"><span className="text-emerald-400 font-black text-sm">✓ Rahasia</span></td>
+                    <td className="py-3 px-3 text-center"><span className="text-stone-500 text-xs">Penjualan</span></td>
+                    <td className="py-3 px-3 text-center"><span className="text-rose-500 font-bold text-xs">Terkunci ✕</span></td>
+                    <td className="py-3 px-3 text-center"><span className="text-rose-500 font-bold text-xs">Terkunci ✕</span></td>
+                    <td className="py-3 px-3 text-center"><span className="text-stone-600 text-sm">✕</span></td>
+                  </tr>
+
+                  {/* Pengaturan Warung & Reset */}
+                  <tr className="hover:bg-stone-800/40 transition">
+                    <td className="py-3 px-4">
+                      <span className="font-extrabold text-white block">Pengaturan Warung & Integrasi Cloud</span>
+                      <span className="text-[10px] text-stone-500">Koneksi Sheets, Firestore, QRIS, reset data</span>
+                    </td>
+                    <td className="py-3 px-3 text-center"><span className="text-emerald-400 font-bold text-sm">✓ Penuh</span></td>
+                    <td className="py-3 px-3 text-center"><span className="text-emerald-400 font-bold text-sm">✓ Sebagian</span></td>
+                    <td className="py-3 px-3 text-center"><span className="text-rose-500 font-bold text-xs">Terkunci ✕</span></td>
+                    <td className="py-3 px-3 text-center"><span className="text-rose-500 font-bold text-xs">Terkunci ✕</span></td>
+                    <td className="py-3 px-3 text-center"><span className="text-stone-600 text-sm">✕</span></td>
+                  </tr>
+
+                  {/* QR Code Self-Order */}
+                  <tr className="hover:bg-stone-800/40 transition bg-stone-950/20">
+                    <td className="py-3 px-4">
+                      <span className="font-extrabold text-sky-300 block">QR Code Self-Order Pelanggan</span>
+                      <span className="text-[10px] text-stone-500">Scan via kamera HP tanpa install aplikasi</span>
+                    </td>
+                    <td className="py-3 px-3 text-center"><span className="text-emerald-400 font-bold text-sm">✓ Kelola</span></td>
+                    <td className="py-3 px-3 text-center"><span className="text-emerald-400 font-bold text-sm">✓ Kelola</span></td>
+                    <td className="py-3 px-3 text-center"><span className="text-emerald-400 font-bold text-sm">✓ Kelola</span></td>
+                    <td className="py-3 px-3 text-center"><span className="text-stone-600 text-sm">✕</span></td>
+                    <td className="py-3 px-3 text-center"><span className="text-emerald-400 font-black text-sm">✓ Pesan Live</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {/* Role Explanations Bento */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-3 border-t border-stone-800">
+              <div className="p-3.5 rounded-2xl bg-amber-950/30 border border-amber-500/40 space-y-1">
+                <div className="flex items-center gap-2 font-black text-amber-400 text-xs">
+                  <span>👑</span> <span>Owner (Pemilik)</span>
                 </div>
+                <p className="text-[11px] text-stone-300 leading-relaxed">
+                  Akses tertinggi: melihat omset dan laba bersih riil, harga modal, mengganti PIN kasir, dan integrasi cloud.
+                </p>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-rose-950/30 border border-rose-500/40 space-y-1">
+                <div className="flex items-center gap-2 font-black text-rose-400 text-xs">
+                  <Shield className="w-4 h-4" /> <span>Admin Operasional</span>
+                </div>
+                <p className="text-[11px] text-stone-300 leading-relaxed">
+                  Menjaga operasional: input menu, ubah harga, cek stok opname, dan memverifikasi laporan kas harian.
+                </p>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-orange-950/30 border border-orange-500/40 space-y-1">
+                <div className="flex items-center gap-2 font-black text-orange-400 text-xs">
+                  <UserCheck className="w-4 h-4" /> <span>Kasir Front-Office</span>
+                </div>
+                <p className="text-[11px] text-stone-300 leading-relaxed">
+                  Fokus penjualan: cepat melayani pesanan kasir, memanggil nomor antrian takeaway, dan kirim struk WhatsApp.
+                </p>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-emerald-950/30 border border-emerald-500/40 space-y-1">
+                <div className="flex items-center gap-2 font-black text-emerald-400 text-xs">
+                  <span>🍳</span> <span>Staf Dapur</span>
+                </div>
+                <p className="text-[11px] text-stone-300 leading-relaxed">
+                  Operasional dapur: memantau tiket pesanan masuk, menyiapkan pesanan, dan mencatat mutasi bahan baku.
+                </p>
               </div>
             </div>
-          );
-        })}
-      </div>
+          </div>
+        </div>
+      )}
 
       {/* Add / Edit User Modal */}
       {isModalOpen && (
@@ -388,33 +615,57 @@ export const UsersManagementView: React.FC<UsersManagementViewProps> = ({
 
               <div className="space-y-1">
                 <label className="text-xs font-extrabold text-stone-300 block">
-                  Peran / Akses
+                  Peran / Hak Akses
                 </label>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setFormRole('Owner')}
+                    className={`min-h-[46px] rounded-2xl border-2 font-black text-xs flex items-center justify-center gap-1.5 cursor-pointer transition ${
+                      formRole === 'Owner'
+                        ? 'bg-amber-500 text-stone-950 border-amber-400 shadow-md'
+                        : 'bg-stone-950 text-stone-400 border-stone-800 hover:border-stone-700'
+                    }`}
+                  >
+                    <span>👑 Owner (Pemilik)</span>
+                  </button>
+
                   <button
                     type="button"
                     onClick={() => setFormRole('ADMIN')}
-                    className={`min-h-[44px] rounded-2xl border-2 font-bold text-xs flex items-center justify-center gap-2 cursor-pointer ${
-                      formRole === 'ADMIN'
+                    className={`min-h-[46px] rounded-2xl border-2 font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition ${
+                      formRole === 'ADMIN' || formRole === 'Admin'
                         ? 'bg-red-600 text-white border-red-500 shadow-md'
-                        : 'bg-stone-950 text-stone-400 border-stone-800'
+                        : 'bg-stone-950 text-stone-400 border-stone-800 hover:border-stone-700'
                     }`}
                   >
                     <Shield className="w-4 h-4" />
-                    <span>Admin (Penuh)</span>
+                    <span>Admin</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setFormRole('KASIR')}
-                    className={`min-h-[44px] rounded-2xl border-2 font-bold text-xs flex items-center justify-center gap-2 cursor-pointer ${
-                      formRole === 'KASIR'
+                    className={`min-h-[46px] rounded-2xl border-2 font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition ${
+                      formRole === 'KASIR' || formRole === 'Kasir'
                         ? 'bg-orange-600 text-white border-orange-500 shadow-md'
-                        : 'bg-stone-950 text-stone-400 border-stone-800'
+                        : 'bg-stone-950 text-stone-400 border-stone-800 hover:border-stone-700'
                     }`}
                   >
                     <UserCheck className="w-4 h-4" />
                     <span>Kasir POS</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setFormRole('Staff')}
+                    className={`min-h-[46px] rounded-2xl border-2 font-bold text-xs flex items-center justify-center gap-1.5 cursor-pointer transition ${
+                      formRole === 'Staff'
+                        ? 'bg-emerald-600 text-white border-emerald-500 shadow-md'
+                        : 'bg-stone-950 text-stone-400 border-stone-800 hover:border-stone-700'
+                    }`}
+                  >
+                    <span>🍳 Staf Dapur</span>
                   </button>
                 </div>
               </div>

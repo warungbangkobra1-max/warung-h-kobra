@@ -210,18 +210,18 @@ export const Header: React.FC<HeaderProps> = ({
                     {currentUser.avatar_url ? (
                       <img
                         src={currentUser.avatar_url}
-                        alt={currentUser.nama}
+                        alt={currentUser.nama || 'User'}
                         className="w-full h-full object-cover"
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center font-bold text-[10px] text-stone-300">
-                        {currentUser.nama.charAt(0)}
+                        {currentUser.nama?.charAt(0) || 'U'}
                       </div>
                     )}
                   </div>
                   <div className="text-left hidden xl:block">
                     <p className="text-[11px] font-black text-stone-100 truncate max-w-[100px]">
-                      {currentUser.nama.split(' ')[0]}
+                      {(currentUser.nama || 'Kasir').split(' ')[0]}
                     </p>
                   </div>
                   <span

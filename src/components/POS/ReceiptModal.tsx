@@ -1,7 +1,12 @@
 import React from 'react';
 import { Printer, Share2, Download, CheckCircle2, X } from 'lucide-react';
 import { Transaction, StoreSettings } from '../../types';
-import { formatRupiah, buildCashierReceiptWhatsAppMessage, openWhatsAppChat } from '../../utils/formatters';
+import {
+  formatRupiah,
+  buildCashierReceiptWhatsAppMessage,
+  openWhatsAppChat,
+  getTakeawayQueueNumber,
+} from '../../utils/formatters';
 
 interface ReceiptModalProps {
   transaction: Transaction | null;
@@ -97,6 +102,23 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
                 </div>
               )}
             </div>
+
+            {/* Takeaway Queue Highlight on Receipt */}
+            {(transaction.tipe_pesanan === 'Takeaway' ||
+              transaction.id_transaksi.startsWith('TKW') ||
+              (!transaction.tipe_pesanan && !transaction.alamat_pengantaran)) && (
+              <div className="py-2.5 my-1.5 px-3 bg-stone-900 border border-amber-500/40 rounded-xl text-center space-y-0.5">
+                <span className="text-[10px] text-amber-400 uppercase tracking-widest font-sans font-bold block">
+                  NOMOR ANTRIAN TAKEAWAY
+                </span>
+                <span className="text-2xl font-black text-white font-mono tracking-wider">
+                  {getTakeawayQueueNumber(transaction)}
+                </span>
+                <span className="text-[9px] text-stone-400 font-sans block">
+                  Harap perhatikan nomor antrian saat dipanggil
+                </span>
+              </div>
+            )}
 
             {/* Items List */}
             <div className="py-3 border-b border-dashed border-stone-700 space-y-2">

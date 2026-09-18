@@ -210,21 +210,21 @@ export const Navigation: React.FC<NavigationProps> = ({
                   {currentUser.avatar_url ? (
                     <img
                       src={currentUser.avatar_url}
-                      alt={currentUser.nama}
+                      alt={currentUser.nama || 'User'}
                       className="w-full h-full object-cover"
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center font-black text-stone-300 text-xs">
-                      {currentUser.nama.charAt(0)}
+                      {currentUser.nama?.charAt(0) || 'U'}
                     </div>
                   )}
                 </div>
                 <div className="min-w-0">
                   <p className="text-xs font-black text-stone-200 truncate group-hover:text-white">
-                    {currentUser.nama}
+                    {currentUser.nama || 'Pengguna'}
                   </p>
                   <p className="text-[10px] text-stone-400 font-mono truncate">
-                    @{currentUser.username}
+                    @{currentUser.username || 'user'}
                   </p>
                 </div>
               </div>
