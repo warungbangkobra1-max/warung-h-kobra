@@ -12,9 +12,12 @@ import {
   Package,
   ArrowUpDown,
   Filter,
+  Flame,
+  RefreshCw,
 } from 'lucide-react';
 import { Product, ProductCategory } from '../../types';
 import { formatRupiah } from '../../utils/formatters';
+import { syncProductsToFirebase } from '../../services/firebase';
 
 interface ProductsViewProps {
   products: Product[];
@@ -38,6 +41,27 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
   const [sortBy, setSortBy] = useState<'nama' | 'harga-asc' | 'harga-desc' | 'stok-asc' | 'stok-desc'>('nama');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [isSyncingFirebase, setIsSyncingFirebase] = useState(false);
+
+  const handleSyncFirebase = async () => {
+    if (!products || products.length === 0) {
+      showToast('Tidak ada menu untuk disinkronkan ke Firebase.', 'info');
+      return;
+    }
+    setIsSyncingFirebase(true);
+    try {
+      const success = await syncProductsToFirebase(products);
+      if (success) {
+        showToast(`Katalog ${products.length} menu berhasil disinkronkan ke Firebase Firestore!`, 'success');
+      } else {
+        showToast('Gagal menyinkronkan menu ke Firebase Firestore.', 'error');
+      }
+    } catch (err: any) {
+      showToast(err?.message || 'Gagal sinkronisasi menu ke Firebase', 'error');
+    } finally {
+      setIsSyncingFirebase(false);
+    }
+  };
 
   // Form State
   const [formData, setFormData] = useState<Partial<Product>>({
@@ -194,6 +218,17 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            id="btn-sync-firebase-products-toolbar"
+            onClick={handleSyncFirebase}
+            disabled={isSyncingFirebase}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-orange-950/40 border border-orange-800/60 text-orange-400 hover:bg-orange-900/50 text-xs font-bold transition disabled:opacity-50 cursor-pointer"
+            title="Sinkronkan katalog menu ke Firebase Cloud"
+          >
+            <Flame className={`w-4 h-4 ${isSyncingFirebase ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">{isSyncingFirebase ? 'Menyinkronkan...' : 'Sinkron Firebase'}</span>
+          </button>
+
           <label className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-stone-900 border border-stone-800 text-stone-300 hover:bg-stone-800 text-xs font-bold cursor-pointer transition">
             <Upload className="w-4 h-4" />
             <span className="hidden sm:inline">Import</span>

@@ -10,6 +10,7 @@ import {
   query,
   orderBy,
   getDocFromServer,
+  writeBatch,
 } from 'firebase/firestore';
 import {
   getAuth,
@@ -358,39 +359,61 @@ export async function updateFirebaseOrderStatus(
 
 /**
  * SYNC PRODUCTS TO FIREBASE (Menu Warung Bang Kobra)
- * Allows authenticated Admin / Owner to sync live menu & stock to Firestore
+ * Syncs menu products and stock levels to Firestore
  */
 export async function syncProductsToFirebase(products: Product[]): Promise<boolean> {
-  // Only authenticated Admin / Owner in Firebase can write to /products (Security RBAC)
-  if (!auth.currentUser) {
+  if (!products || products.length === 0) {
     return false;
   }
 
   try {
-    const promises = products.map((prod) => {
-      const prodDocRef = doc(db, 'products', prod.id);
-      return setDoc(
-        prodDocRef,
-        {
-          id: prod.id,
-          nama: prod.nama,
-          kategori: prod.kategori,
-          harga_modal: prod.harga_modal,
-          harga_jual: prod.harga_jual,
-          stok: prod.stok,
-          satuan: prod.satuan || 'Pcs',
-          deskripsi: prod.deskripsi || '',
-          gambar_url: prod.foto || prod.gambar_url || '',
-          updated_at: new Date().toISOString(),
-        },
-        { merge: true }
-      );
-    });
+    // Ensure Firebase Auth session is active
+    if (!auth.currentUser) {
+      await ensureFirebaseAuth();
+    }
 
-    await Promise.all(promises);
+    // Chunk in batches of 300 (Firestore maximum is 500 per batch)
+    const BATCH_SIZE = 300;
+    for (let i = 0; i < products.length; i += BATCH_SIZE) {
+      const chunk = products.slice(i, i + BATCH_SIZE);
+      const batch = writeBatch(db);
+
+      for (const prod of chunk) {
+        if (!prod || !prod.id) continue;
+        const prodDocRef = doc(db, 'products', String(prod.id));
+        const payload = {
+          id: String(prod.id),
+          sku: String(prod.sku || prod.id),
+          nama: String(prod.nama || 'Menu Kobra'),
+          kategori: String(prod.kategori || 'Makanan'),
+          harga_modal: Number(prod.harga_modal ?? 0),
+          harga_jual: Number(prod.harga_jual ?? 0),
+          satuan: String(prod.satuan || 'Pcs'),
+          stok: Number(prod.stok ?? 0),
+          stok_minimum: Number(prod.stok_minimum ?? 0),
+          foto: String(prod.foto || prod.gambar_url || ''),
+          gambar_url: String(prod.foto || prod.gambar_url || ''),
+          status: String(prod.status || 'Aktif'),
+          deskripsi: String(prod.deskripsi || ''),
+          created_at: String(prod.created_at || new Date().toISOString()),
+          updated_at: new Date().toISOString(),
+        };
+
+        batch.set(prodDocRef, payload, { merge: true });
+      }
+
+      await batch.commit();
+    }
+
+    console.log(`Berhasil menyinkronkan ${products.length} menu ke Firebase Firestore.`);
     return true;
-  } catch (err) {
-    console.warn('Sync products to Firebase skipped or restricted:', err);
+  } catch (err: any) {
+    console.error('Error syncing products to Firebase:', err);
+    try {
+      handleFirestoreError(err, OperationType.WRITE, 'products');
+    } catch {
+      // Handled
+    }
     return false;
   }
 }

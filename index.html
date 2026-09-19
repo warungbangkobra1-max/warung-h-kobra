@@ -3,6 +3,31 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <!-- Global fetch setter compatibility shim for sandboxed iframe environments -->
+    <script>
+      (function() {
+        try {
+          if (typeof window !== 'undefined' && 'fetch' in window) {
+            var _origFetch = window.fetch ? window.fetch.bind(window) : null;
+            var _activeFetch = _origFetch;
+            Object.defineProperty(window, 'fetch', {
+              get: function() {
+                return _activeFetch;
+              },
+              set: function(fn) {
+                if (typeof fn === 'function') {
+                  _activeFetch = fn;
+                }
+              },
+              configurable: true,
+              enumerable: true
+            });
+          }
+        } catch (e) {
+          // Graceful fallback
+        }
+      })();
+    </script>
     <title>Warung Bang Kobra - POS & Order Management</title>
     <meta name="description" content="Aplikasi web Point of Sale (POS), QR Code Takeaway & Delivery mandiri pelanggan tanpa instal aplikasi, pesanan WhatsApp, kontrol stok, dan laporan keuangan Warung Bang Kobra." />
     <meta property="og:title" content="Warung Bang Kobra - POS & Order Management" />

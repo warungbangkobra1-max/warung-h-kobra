@@ -483,11 +483,11 @@
     },
     "/products/{productId}": {
       "schema": "Product",
-      "description": "Product menu readable by customers; modifications restricted to Admin and Owner."
+      "description": "Product menu readable by customers. Creation and sync allowed for valid product schemas with ID matching; deletion restricted to Admin and Owner."
     },
     "/categories/{categoryId}": {
       "schema": "Category",
-      "description": "Categories readable by public/customers; modifications restricted to Admin and Owner."
+      "description": "Categories readable by public/customers. Creation and sync allowed for valid category schemas with ID matching; deletion restricted to Admin and Owner."
     },
     "/orders/{orderId}": {
       "schema": "Order",

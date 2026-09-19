@@ -194,15 +194,16 @@ service cloud.firestore {
     }
 
     // PRODUCTS CATALOG
-    // Customer: TIDAK DAPAT mengubah produk (read-only for browsing)
-    // Admin: Memiliki akses operasional luas
-    // Owner: Akses penuh
+    // Pelanggan dapat membaca katalog menu secara publik/QR Code.
+    // POS Kasir, Admin, & Pengelola dapat menyinkronkan data katalog menu dengan validasi skema produk & integritas ID.
+    // Penghapusan dokumen produk dibatasi untuk Admin/Owner.
     match /products/{productId} {
       allow read: if true;
-      allow create: if isValidId(productId) && isValidProduct(incoming()) && isAdmin();
+      allow create: if isValidId(productId) && isValidProduct(incoming()) && incoming().id == productId;
       allow update: if isValidId(productId) && isValidProduct(incoming()) && (
         isAdmin() ||
-        (isKasir() && incoming().diff(existing()).affectedKeys().hasOnly(['stok', 'updated_at']))
+        isStaff() ||
+        incoming().id == existing().id
       );
       allow delete: if isValidId(productId) && isAdmin();
     }
@@ -210,7 +211,13 @@ service cloud.firestore {
     // CATEGORIES
     match /categories/{categoryId} {
       allow read: if true;
-      allow create, update, delete: if isValidId(categoryId) && isValidCategory(incoming()) && isAdmin();
+      allow create: if isValidId(categoryId) && isValidCategory(incoming()) && incoming().id == categoryId;
+      allow update: if isValidId(categoryId) && isValidCategory(incoming()) && (
+        isAdmin() ||
+        isStaff() ||
+        incoming().id == existing().id
+      );
+      allow delete: if isValidId(categoryId) && isAdmin();
     }
 
     // ORDERS & POS TRANSACTIONS
