@@ -10,6 +10,7 @@ import {
   SyncState,
   UserRole,
   WarungUser,
+  CategoryItem,
 } from './types';
 import { StorageService } from './services/storage';
 import { GoogleSheetsSyncService } from './services/googleSheetsSync';
@@ -42,7 +43,21 @@ import {
   saveOrderToFirebase,
   subscribeToFirebaseOrders,
   updateFirebaseOrderStatus,
+  deleteOrderFromFirebase,
   syncProductsToFirebase,
+  deleteProductFromFirebase,
+  subscribeToFirebaseProducts,
+  syncCategoriesToFirebase,
+  deleteCategoryFromFirebase,
+  subscribeToFirebaseCategories,
+  saveExpenseToFirebase,
+  deleteExpenseFromFirebase,
+  subscribeToFirebaseExpenses,
+  saveCustomerToFirebase,
+  deleteCustomerFromFirebase,
+  subscribeToFirebaseCustomers,
+  saveSettingsToFirebase,
+  subscribeToFirebaseSettings,
   subscribeToAuthState,
 } from './services/firebase';
 import { formatRupiah } from './utils/formatters';
@@ -117,6 +132,7 @@ export default function App() {
 
   // Core Data States
   const [products, setProducts] = useState<Product[]>(() => StorageService.getProducts());
+  const [categories, setCategories] = useState<CategoryItem[]>(() => StorageService.getCategories());
   const [transactions, setTransactions] = useState<Transaction[]>(() =>
     StorageService.getTransactions()
   );
@@ -163,64 +179,124 @@ export default function App() {
     []
   );
 
-  // Real-time Firebase Orders Sync & Product catalog sync
+  // Real-time Cloud Database Synchronization across all devices (Firebase Firestore)
   useEffect(() => {
-    // Sync products catalog to Firebase when an Admin/Owner is authenticated
-    const unsubAuth = subscribeToAuthState((user) => {
-      if (user && products.length > 0) {
-        syncProductsToFirebase(products).catch(() => {});
+    // 1. Subscribe to Products Catalog in real-time
+    const unsubscribeProducts = subscribeToFirebaseProducts((remoteProducts) => {
+      if (remoteProducts && remoteProducts.length > 0) {
+        setProducts(remoteProducts);
+        StorageService.saveProducts(remoteProducts);
+      } else {
+        const local = StorageService.getProducts();
+        if (local.length > 0) {
+          syncProductsToFirebase(local).catch(() => {});
+        }
       }
     });
 
-    // Subscribe to incoming orders in real-time from Firebase Firestore
+    // 2. Subscribe to Categories in real-time
+    const unsubscribeCategories = subscribeToFirebaseCategories((remoteCategories) => {
+      if (remoteCategories && remoteCategories.length > 0) {
+        setCategories(remoteCategories);
+        StorageService.saveCategories(remoteCategories);
+      } else {
+        const local = StorageService.getCategories();
+        if (local.length > 0) {
+          syncCategoriesToFirebase(local).catch(() => {});
+        }
+      }
+    });
+
+    // 3. Subscribe to Orders in real-time
     const unsubscribeOrders = subscribeToFirebaseOrders((incomingOrders) => {
-      if (!incomingOrders || incomingOrders.length === 0) return;
+      if (!incomingOrders || incomingOrders.length === 0) {
+        const localOrders = StorageService.getTransactions();
+        if (localOrders.length > 0) {
+          localOrders.forEach((order) => {
+            saveOrderToFirebase(order).catch(() => {});
+          });
+        }
+        return;
+      }
 
       setTransactions((prevTxList) => {
-        const existingIds = new Set(prevTxList.map((t) => t.id_transaksi));
-        const newOrders = incomingOrders.filter((io) => !existingIds.has(io.id_transaksi));
-
-        if (newOrders.length > 0) {
-          // Play audio notification chime for cashier
-          playOrderChime();
-
-          const latestOrder = newOrders[0];
-          setNewOrderAlert(latestOrder);
-          showToast(
-            `🔔 PESANAN BARU DARI QR! ${latestOrder.nama_pelanggan} (${latestOrder.tipe_pesanan}) - Total: ${formatRupiah(latestOrder.total)}`,
-            'success'
-          );
-
-          const merged = [...newOrders, ...prevTxList];
-          StorageService.saveTransactions(merged);
-          return merged;
-        }
-
-        // Check for order status updates from Firebase
-        let hasChanges = false;
-        const updatedList = prevTxList.map((localTx) => {
-          const match = incomingOrders.find((io) => io.id_transaksi === localTx.id_transaksi);
-          if (match && match.status !== localTx.status) {
-            hasChanges = true;
-            return { ...localTx, status: match.status };
+        if (prevTxList.length > 0) {
+          const existingIds = new Set(prevTxList.map((t) => t.id_transaksi));
+          const newOrders = incomingOrders.filter((io) => !existingIds.has(io.id_transaksi));
+          if (newOrders.length > 0) {
+            playOrderChime();
+            const latestOrder = newOrders[0];
+            setNewOrderAlert(latestOrder);
+            showToast(
+              `🔔 PESANAN BARU DARI QR! ${latestOrder.nama_pelanggan} (${latestOrder.tipe_pesanan || 'Takeaway'}) - Total: ${formatRupiah(latestOrder.total)}`,
+              'success'
+            );
           }
-          return localTx;
-        });
-
-        if (hasChanges) {
-          StorageService.saveTransactions(updatedList);
-          return updatedList;
         }
-
-        return prevTxList;
+        StorageService.saveTransactions(incomingOrders);
+        return incomingOrders;
       });
     });
 
+    // 4. Subscribe to Expenses in real-time
+    const unsubscribeExpenses = subscribeToFirebaseExpenses((remoteExpenses) => {
+      if (remoteExpenses && remoteExpenses.length > 0) {
+        setExpenses(remoteExpenses);
+        StorageService.saveExpenses(remoteExpenses);
+      } else {
+        const local = StorageService.getExpenses();
+        if (local.length > 0) {
+          local.forEach((exp) => saveExpenseToFirebase(exp).catch(() => {}));
+        }
+      }
+    });
+
+    // 5. Subscribe to Customers in real-time
+    const unsubscribeCustomers = subscribeToFirebaseCustomers((remoteCustomers) => {
+      if (remoteCustomers && remoteCustomers.length > 0) {
+        setCustomers(remoteCustomers);
+        StorageService.saveCustomers(remoteCustomers);
+      } else {
+        const local = StorageService.getCustomers();
+        if (local.length > 0) {
+          local.forEach((cust) => saveCustomerToFirebase(cust).catch(() => {}));
+        }
+      }
+    });
+
+    // 6. Subscribe to Store Settings in real-time
+    const unsubscribeSettings = subscribeToFirebaseSettings((remoteSettings) => {
+      if (remoteSettings && Object.keys(remoteSettings).length > 0) {
+        setSettings((prev) => {
+          const merged = { ...prev, ...remoteSettings };
+          StorageService.saveSettings(merged);
+          return merged;
+        });
+      } else {
+        const local = StorageService.getSettings();
+        if (local) {
+          saveSettingsToFirebase(local).catch(() => {});
+        }
+      }
+    });
+
+    // 7. Subscribe to Auth State
+    const unsubAuth = subscribeToAuthState((user) => {
+      if (user) {
+        console.log('Firebase user session ready:', user.uid);
+      }
+    });
+
     return () => {
-      unsubAuth();
+      unsubscribeProducts();
+      unsubscribeCategories();
       unsubscribeOrders();
+      unsubscribeExpenses();
+      unsubscribeCustomers();
+      unsubscribeSettings();
+      unsubAuth();
     };
-  }, [products]);
+  }, []);
 
   // Theme Handling
   useEffect(() => {
@@ -377,10 +453,23 @@ export default function App() {
     });
 
     // Re-read products and mutations as they were modified by completeTransaction
-    setProducts(StorageService.getProducts());
+    const updatedProds = StorageService.getProducts();
+    const updatedCusts = StorageService.getCustomers();
+    setProducts(updatedProds);
     setMutations(StorageService.getStockMutations());
     setTransactions(StorageService.getTransactions());
-    setCustomers(StorageService.getCustomers());
+    setCustomers(updatedCusts);
+
+    // Sync updated stock to Firebase so other devices immediately reflect decreased stock
+    syncProductsToFirebase(updatedProds).catch(() => {});
+
+    // Sync customer update to Firebase if applicable
+    if (newTx.nama_pelanggan) {
+      const cust = updatedCusts.find((c) => c.nama === newTx.nama_pelanggan);
+      if (cust) {
+        saveCustomerToFirebase(cust).catch(() => {});
+      }
+    }
 
     // Trigger auto-sync if enabled and connected
     const scriptUrl = settings.googleSheetsUrl || settings.googleAppsScriptUrl;
@@ -422,6 +511,7 @@ export default function App() {
   const handleDeleteProduct = (id: string) => {
     const updated = StorageService.deleteProduct(id);
     setProducts(updated);
+    deleteProductFromFirebase(id).catch(() => {});
     syncProductsToFirebase(updated).catch(() => {});
   };
 
@@ -435,17 +525,39 @@ export default function App() {
   const handleStockUpdated = (prods: Product[], muts: StockMutation[]) => {
     setProducts(prods);
     setMutations(muts);
+    syncProductsToFirebase(prods).catch(() => {});
+  };
+
+  // Categories CRUD
+  const handleAddCategory = (cat: CategoryItem) => {
+    const updated = StorageService.addCategory(cat);
+    setCategories(updated);
+    syncCategoriesToFirebase(updated).catch(() => {});
+  };
+
+  const handleUpdateCategory = (cat: CategoryItem) => {
+    const updated = StorageService.updateCategory(cat);
+    setCategories(updated);
+    syncCategoriesToFirebase(updated).catch(() => {});
+  };
+
+  const handleDeleteCategory = (id: string) => {
+    const updated = StorageService.deleteCategory(id);
+    setCategories(updated);
+    deleteCategoryFromFirebase(id).catch(() => {});
   };
 
   // Expenses CRUD
   const handleAddExpense = (expense: Expense) => {
     const updated = StorageService.addExpense(expense);
     setExpenses(updated);
+    saveExpenseToFirebase(expense).catch(() => {});
   };
 
   const handleDeleteExpense = (id: string) => {
     const updated = StorageService.deleteExpense(id);
     setExpenses(updated);
+    deleteExpenseFromFirebase(id).catch(() => {});
   };
 
   // Customers CRUD
@@ -453,24 +565,28 @@ export default function App() {
     const updated = [cust, ...customers];
     StorageService.saveCustomers(updated);
     setCustomers(updated);
+    saveCustomerToFirebase(cust).catch(() => {});
   };
 
   const handleUpdateCustomer = (cust: Customer) => {
     const updated = customers.map((c) => (c.id === cust.id ? cust : c));
     StorageService.saveCustomers(updated);
     setCustomers(updated);
+    saveCustomerToFirebase(cust).catch(() => {});
   };
 
   const handleDeleteCustomer = (id: string) => {
     const updated = customers.filter((c) => c.id !== id);
     StorageService.saveCustomers(updated);
     setCustomers(updated);
+    deleteCustomerFromFirebase(id).catch(() => {});
   };
 
   // Save Settings
   const handleSaveSettings = (newSettings: StoreSettings) => {
     setSettings(newSettings);
     StorageService.saveSettings(newSettings);
+    saveSettingsToFirebase(newSettings).catch(() => {});
   };
 
   // Reset to initial demo data
@@ -662,8 +778,12 @@ export default function App() {
 
           {activeTab === 'categories' && (
             <CategoriesView
+              categories={categories}
               products={products}
               onNavigateToProducts={() => setActiveTab('products')}
+              onAddCategory={handleAddCategory}
+              onUpdateCategory={handleUpdateCategory}
+              onDeleteCategory={handleDeleteCategory}
               showToast={showToast}
             />
           )}

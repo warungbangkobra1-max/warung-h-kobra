@@ -21,19 +21,29 @@ import { CategoryItem, Product } from '../../types';
 import { StorageService } from '../../services/storage';
 
 interface CategoriesViewProps {
+  categories?: CategoryItem[];
   products: Product[];
   onNavigateToProducts?: (categoryName: string) => void;
+  onAddCategory?: (cat: CategoryItem) => void;
+  onUpdateCategory?: (cat: CategoryItem) => void;
+  onDeleteCategory?: (id: string) => void;
   showToast: (msg: string, type?: 'success' | 'error' | 'info') => void;
 }
 
 export const CategoriesView: React.FC<CategoriesViewProps> = ({
+  categories: propCategories,
   products,
   onNavigateToProducts,
+  onAddCategory,
+  onUpdateCategory,
+  onDeleteCategory,
   showToast,
 }) => {
-  const [categories, setCategories] = useState<CategoryItem[]>(() =>
+  const [localCategories, setLocalCategories] = useState<CategoryItem[]>(() =>
     StorageService.getCategories()
   );
+
+  const categories = propCategories || localCategories;
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<CategoryItem | null>(null);
@@ -84,8 +94,12 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
         deskripsi: formDesc.trim(),
         status: formStatus,
       };
-      const updatedList = StorageService.updateCategory(updatedCat);
-      setCategories(updatedList);
+      if (onUpdateCategory) {
+        onUpdateCategory(updatedCat);
+      } else {
+        const updatedList = StorageService.updateCategory(updatedCat);
+        setLocalCategories(updatedList);
+      }
       showToast(`Kategori "${formName}" berhasil diperbarui`, 'success');
     } else {
       const newCat: CategoryItem = {
@@ -95,8 +109,12 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
         status: formStatus,
         urutan: categories.length + 1,
       };
-      const updatedList = StorageService.addCategory(newCat);
-      setCategories(updatedList);
+      if (onAddCategory) {
+        onAddCategory(newCat);
+      } else {
+        const updatedList = StorageService.addCategory(newCat);
+        setLocalCategories(updatedList);
+      }
       showToast(`Kategori "${formName}" berhasil ditambahkan`, 'success');
     }
 
@@ -114,8 +132,12 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
     }
 
     if (window.confirm(`Hapus kategori "${cat.nama}"?`)) {
-      const updated = StorageService.deleteCategory(cat.id);
-      setCategories(updated);
+      if (onDeleteCategory) {
+        onDeleteCategory(cat.id);
+      } else {
+        const updated = StorageService.deleteCategory(cat.id);
+        setLocalCategories(updated);
+      }
       showToast(`Kategori "${cat.nama}" berhasil dihapus`, 'info');
     }
   };

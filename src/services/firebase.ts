@@ -11,6 +11,7 @@ import {
   orderBy,
   getDocFromServer,
   writeBatch,
+  deleteDoc,
 } from 'firebase/firestore';
 import {
   getAuth,
@@ -22,7 +23,17 @@ import {
   User as FirebaseUser,
 } from 'firebase/auth';
 import firebaseConfig from '../../firebase-applet-config.json';
-import { Transaction, Product, WarungUser, UserRole } from '../types';
+import {
+  Transaction,
+  Product,
+  CategoryItem,
+  Expense,
+  Customer,
+  StoreSettings,
+  StockMutation,
+  WarungUser,
+  UserRole,
+} from '../types';
 
 // Initialize Firebase App safely
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
@@ -419,7 +430,7 @@ export async function syncProductsToFirebase(products: Product[]): Promise<boole
 }
 
 /**
- * REAL-TIME LISTENER FOR CUSTOMER BROWSER MENU
+ * REAL-TIME LISTENER FOR PRODUCTS CATALOG (Synced across all devices)
  */
 export function subscribeToFirebaseProducts(
   onProductsReceived: (products: Product[]) => void
@@ -432,7 +443,10 @@ export function subscribeToFirebaseProducts(
         if (!snapshot.empty) {
           const list: Product[] = [];
           snapshot.forEach((docSnap) => {
-            list.push(docSnap.data() as Product);
+            const data = docSnap.data() as Product;
+            if (data && data.id) {
+              list.push(data);
+            }
           });
           onProductsReceived(list);
         }
@@ -449,6 +463,347 @@ export function subscribeToFirebaseProducts(
     return unsubscribe;
   } catch (err) {
     console.error('Failed to initialize products listener:', err);
+    return () => {};
+  }
+}
+
+/**
+ * DELETE PRODUCT FROM FIREBASE
+ */
+export async function deleteProductFromFirebase(productId: string): Promise<boolean> {
+  if (!productId) return false;
+  try {
+    if (!auth.currentUser) {
+      await ensureFirebaseAuth();
+    }
+    const docRef = doc(db, 'products', String(productId));
+    await deleteDoc(docRef);
+    return true;
+  } catch (err) {
+    console.error(`Gagal menghapus produk ${productId} dari Firebase:`, err);
+    return false;
+  }
+}
+
+/**
+ * DELETE ORDER FROM FIREBASE
+ */
+export async function deleteOrderFromFirebase(orderId: string): Promise<boolean> {
+  if (!orderId) return false;
+  try {
+    if (!auth.currentUser) {
+      await ensureFirebaseAuth();
+    }
+    const docRef = doc(db, 'orders', String(orderId));
+    await deleteDoc(docRef);
+    return true;
+  } catch (err) {
+    console.error(`Gagal menghapus order ${orderId} dari Firebase:`, err);
+    return false;
+  }
+}
+
+/**
+ * SYNC CATEGORIES TO FIREBASE
+ */
+export async function syncCategoriesToFirebase(categories: CategoryItem[]): Promise<boolean> {
+  if (!categories || categories.length === 0) return false;
+  try {
+    if (!auth.currentUser) {
+      await ensureFirebaseAuth();
+    }
+    const batch = writeBatch(db);
+    for (const cat of categories) {
+      if (!cat || !cat.id) continue;
+      const catRef = doc(db, 'categories', String(cat.id));
+      batch.set(
+        catRef,
+        {
+          id: String(cat.id),
+          nama: String(cat.nama || 'Kategori'),
+          deskripsi: String(cat.deskripsi || ''),
+          icon: String(cat.icon || ''),
+          urutan: Number(cat.urutan ?? 0),
+          status: String(cat.status || 'Aktif'),
+          updated_at: new Date().toISOString(),
+        },
+        { merge: true }
+      );
+    }
+    await batch.commit();
+    return true;
+  } catch (err) {
+    console.error('Gagal menyinkronkan kategori ke Firebase:', err);
+    return false;
+  }
+}
+
+/**
+ * DELETE CATEGORY FROM FIREBASE
+ */
+export async function deleteCategoryFromFirebase(categoryId: string): Promise<boolean> {
+  if (!categoryId) return false;
+  try {
+    if (!auth.currentUser) {
+      await ensureFirebaseAuth();
+    }
+    const docRef = doc(db, 'categories', String(categoryId));
+    await deleteDoc(docRef);
+    return true;
+  } catch (err) {
+    console.error(`Gagal menghapus kategori ${categoryId} dari Firebase:`, err);
+    return false;
+  }
+}
+
+/**
+ * SUBSCRIBE TO CATEGORIES (Synced across all devices)
+ */
+export function subscribeToFirebaseCategories(
+  onCategoriesReceived: (categories: CategoryItem[]) => void
+): () => void {
+  try {
+    const colRef = collection(db, 'categories');
+    const unsubscribe = onSnapshot(
+      colRef,
+      (snapshot) => {
+        if (!snapshot.empty) {
+          const list: CategoryItem[] = [];
+          snapshot.forEach((docSnap) => {
+            const data = docSnap.data() as CategoryItem;
+            if (data && data.id) {
+              list.push(data);
+            }
+          });
+          onCategoriesReceived(list);
+        }
+      },
+      (error) => {
+        console.warn('Firebase categories subscription warning:', error);
+      }
+    );
+    return unsubscribe;
+  } catch (err) {
+    console.error('Failed to initialize categories listener:', err);
+    return () => {};
+  }
+}
+
+/**
+ * SAVE EXPENSE TO FIREBASE
+ */
+export async function saveExpenseToFirebase(expense: Expense): Promise<boolean> {
+  if (!expense || !expense.id) return false;
+  try {
+    if (!auth.currentUser) {
+      await ensureFirebaseAuth();
+    }
+    const docRef = doc(db, 'expenses', String(expense.id));
+    const payload = {
+      id: String(expense.id),
+      tanggal: String(expense.tanggal || new Date().toISOString().slice(0, 10)),
+      kategori: String(expense.kategori || 'Operasional'),
+      keterangan: String(expense.keterangan || ''),
+      jumlah: Number(expense.jumlah ?? 0),
+      catatan: String(expense.catatan || ''),
+      diinput_oleh: String(expense.diinput_oleh || 'Kasir Warung'),
+      created_at: String(expense.created_at || new Date().toISOString()),
+    };
+    await setDoc(docRef, payload, { merge: true });
+    return true;
+  } catch (err) {
+    console.error('Gagal menyimpan pengeluaran ke Firebase:', err);
+    return false;
+  }
+}
+
+/**
+ * DELETE EXPENSE FROM FIREBASE
+ */
+export async function deleteExpenseFromFirebase(expenseId: string): Promise<boolean> {
+  if (!expenseId) return false;
+  try {
+    if (!auth.currentUser) {
+      await ensureFirebaseAuth();
+    }
+    const docRef = doc(db, 'expenses', String(expenseId));
+    await deleteDoc(docRef);
+    return true;
+  } catch (err) {
+    console.error(`Gagal menghapus pengeluaran ${expenseId} dari Firebase:`, err);
+    return false;
+  }
+}
+
+/**
+ * SUBSCRIBE TO EXPENSES (Synced across all devices)
+ */
+export function subscribeToFirebaseExpenses(
+  onExpensesReceived: (expenses: Expense[]) => void
+): () => void {
+  try {
+    const colRef = collection(db, 'expenses');
+    const q = query(colRef, orderBy('created_at', 'desc'));
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        if (!snapshot.empty) {
+          const list: Expense[] = [];
+          snapshot.forEach((docSnap) => {
+            const data = docSnap.data() as Expense;
+            if (data && data.id) {
+              list.push(data);
+            }
+          });
+          onExpensesReceived(list);
+        }
+      },
+      (error) => {
+        console.warn('Firebase expenses subscription warning:', error);
+      }
+    );
+    return unsubscribe;
+  } catch (err) {
+    console.error('Failed to initialize expenses listener:', err);
+    return () => {};
+  }
+}
+
+/**
+ * SAVE CUSTOMER TO FIREBASE
+ */
+export async function saveCustomerToFirebase(customer: Customer): Promise<boolean> {
+  if (!customer || !customer.id) return false;
+  try {
+    if (!auth.currentUser) {
+      await ensureFirebaseAuth();
+    }
+    const docRef = doc(db, 'customers', String(customer.id));
+    const payload = {
+      id: String(customer.id),
+      nama: String(customer.nama || 'Pelanggan'),
+      no_whatsapp: String(customer.no_whatsapp || customer.whatsapp || ''),
+      whatsapp: String(customer.no_whatsapp || customer.whatsapp || ''),
+      alamat: String(customer.alamat || ''),
+      catatan: String(customer.catatan || ''),
+      total_transaksi: Number(customer.total_transaksi ?? 0),
+      total_belanja: Number(customer.total_belanja ?? 0),
+      last_order: String(customer.last_order || ''),
+      created_at: String(customer.created_at || new Date().toISOString()),
+      updated_at: new Date().toISOString(),
+    };
+    await setDoc(docRef, payload, { merge: true });
+    return true;
+  } catch (err) {
+    console.error('Gagal menyimpan pelanggan ke Firebase:', err);
+    return false;
+  }
+}
+
+/**
+ * DELETE CUSTOMER FROM FIREBASE
+ */
+export async function deleteCustomerFromFirebase(customerId: string): Promise<boolean> {
+  if (!customerId) return false;
+  try {
+    if (!auth.currentUser) {
+      await ensureFirebaseAuth();
+    }
+    const docRef = doc(db, 'customers', String(customerId));
+    await deleteDoc(docRef);
+    return true;
+  } catch (err) {
+    console.error(`Gagal menghapus pelanggan ${customerId} dari Firebase:`, err);
+    return false;
+  }
+}
+
+/**
+ * SUBSCRIBE TO CUSTOMERS (Synced across all devices)
+ */
+export function subscribeToFirebaseCustomers(
+  onCustomersReceived: (customers: Customer[]) => void
+): () => void {
+  try {
+    const colRef = collection(db, 'customers');
+    const unsubscribe = onSnapshot(
+      colRef,
+      (snapshot) => {
+        if (!snapshot.empty) {
+          const list: Customer[] = [];
+          snapshot.forEach((docSnap) => {
+            const data = docSnap.data() as Customer;
+            if (data && data.id) {
+              list.push(data);
+            }
+          });
+          onCustomersReceived(list);
+        }
+      },
+      (error) => {
+        console.warn('Firebase customers subscription warning:', error);
+      }
+    );
+    return unsubscribe;
+  } catch (err) {
+    console.error('Failed to initialize customers listener:', err);
+    return () => {};
+  }
+}
+
+/**
+ * SAVE STORE SETTINGS TO FIREBASE (Warung Bang Kobra global settings)
+ */
+export async function saveSettingsToFirebase(settings: StoreSettings): Promise<boolean> {
+  if (!settings) return false;
+  try {
+    if (!auth.currentUser) {
+      await ensureFirebaseAuth();
+    }
+    const docRef = doc(db, 'settings', 'warung');
+    const payload = {
+      id: 'warung',
+      storeName: String(settings.storeName || 'Warung Bang Kobra'),
+      tagline: String(settings.tagline || ''),
+      address: String(settings.address || ''),
+      whatsappNumber: String(settings.whatsappNumber || ''),
+      logoUrl: String(settings.logoUrl || ''),
+      receiptFooter: String(settings.receiptFooter || ''),
+      taxPercent: Number(settings.taxPercent ?? 0),
+      currency: String(settings.currency || 'Rp'),
+      qrisImageUrl: String(settings.qrisImageUrl || ''),
+      updated_at: new Date().toISOString(),
+    };
+    await setDoc(docRef, payload, { merge: true });
+    return true;
+  } catch (err) {
+    console.error('Gagal menyimpan settings ke Firebase:', err);
+    return false;
+  }
+}
+
+/**
+ * SUBSCRIBE TO STORE SETTINGS (Synced across all devices)
+ */
+export function subscribeToFirebaseSettings(
+  onSettingsReceived: (settings: Partial<StoreSettings>) => void
+): () => void {
+  try {
+    const docRef = doc(db, 'settings', 'warung');
+    const unsubscribe = onSnapshot(
+      docRef,
+      (docSnap) => {
+        if (docSnap.exists()) {
+          onSettingsReceived(docSnap.data() as Partial<StoreSettings>);
+        }
+      },
+      (error) => {
+        console.warn('Firebase settings subscription warning:', error);
+      }
+    );
+    return unsubscribe;
+  } catch (err) {
+    console.error('Failed to initialize settings listener:', err);
     return () => {};
   }
 }

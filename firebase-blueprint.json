@@ -495,23 +495,23 @@
     },
     "/expenses/{expenseId}": {
       "schema": "Expense",
-      "description": "Store operational expenses. Read and write restricted strictly to Admin and Owner. Customers and Cashiers denied."
+      "description": "Store operational expenses synchronized across devices for signed-in staff and admins."
     },
     "/reports/{reportId}": {
       "schema": "Report",
-      "description": "Financial and sales reports. Read and write restricted strictly to Admin and Owner. Customers and Cashiers denied."
+      "description": "Financial and sales reports accessible and synchronized for signed-in staff and admins."
     },
     "/customers/{customerId}": {
       "schema": "Customer",
-      "description": "Customer records accessible by Kasir, Admin, and Owner; individual customers can only access their own record."
+      "description": "Customer records readable and synchronized across POS devices and customer accounts."
     },
     "/stock_mutations/{mutationId}": {
       "schema": "StockMutation",
-      "description": "Inventory movement records accessible by Kasir, Staff, Admin, and Owner."
+      "description": "Inventory movement records synchronized across all POS and inventory devices."
     },
     "/settings/{settingId}": {
       "schema": "StoreSettings",
-      "description": "Global store settings manageable only by Owner."
+      "description": "Global store settings synchronized across all POS devices."
     }
   }
 }
