@@ -117,15 +117,16 @@ export class StorageService {
   // USERS & AUTH
   static getUsers(): WarungUser[] {
     const users = safeGetItem<WarungUser[]>(STORAGE_KEYS.USERS, INITIAL_USERS);
-    // If the saved array is missing newer roles like Staff/Customer/Owner, merge initial users
+    // If the saved array is missing Rayyan or key initial roles, merge initial users
+    const hasRayyan = users.some((u) => u.email === 'rayyanarasid549@gmail.com' || u.id === 'USR-RAYYAN');
     const hasOwner = users.some((u) => u.role === 'Owner' || u.username === 'owner');
     const hasStaff = users.some((u) => u.role === 'Staff');
     const hasCustomer = users.some((u) => u.role === 'Customer');
-    if (!hasOwner || !hasStaff || !hasCustomer) {
+    if (!hasRayyan || !hasOwner || !hasStaff || !hasCustomer) {
       const merged = [...users];
       INITIAL_USERS.forEach((initUser) => {
-        if (!merged.some((m) => m.id === initUser.id || m.username === initUser.username)) {
-          merged.push(initUser);
+        if (!merged.some((m) => m.id === initUser.id || (initUser.email && m.email === initUser.email))) {
+          merged.unshift(initUser);
         }
       });
       safeSetItem(STORAGE_KEYS.USERS, merged);
@@ -143,7 +144,7 @@ export class StorageService {
     if (authUser) return authUser;
     // Default logged in user is the Owner for initial experience, or can be null
     const users = this.getUsers();
-    const defaultUser = users.find((u) => u.role === 'Owner') || users[0] || INITIAL_USERS[0];
+    const defaultUser = users.find((u) => u.email === 'rayyanarasid549@gmail.com') || users.find((u) => u.role === 'Owner') || users[0] || INITIAL_USERS[0];
     if (defaultUser) {
       this.setAuthUser(defaultUser);
       return defaultUser;
@@ -169,7 +170,15 @@ export class StorageService {
 
   static addUser(user: WarungUser): WarungUser[] {
     const users = this.getUsers();
-    const updated = [...users, user];
+    const existingIndex = users.findIndex(
+      (u) => u.id === user.id || (user.email && u.email?.toLowerCase() === user.email.toLowerCase())
+    );
+    let updated: WarungUser[];
+    if (existingIndex >= 0) {
+      updated = users.map((u, i) => (i === existingIndex ? { ...u, ...user } : u));
+    } else {
+      updated = [user, ...users];
+    }
     this.saveUsers(updated);
     return updated;
   }

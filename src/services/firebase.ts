@@ -134,15 +134,36 @@ testFirestoreConnection();
  */
 export async function signInWithGoogle(): Promise<FirebaseUser> {
   const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: 'select_account' });
+
   try {
+    // If an anonymous guest session was active, sign out first to avoid provider collision
+    if (auth.currentUser && auth.currentUser.isAnonymous) {
+      try {
+        await signOut(auth);
+      } catch (soErr) {
+        console.warn('Notice: sign out anonymous before Google login:', soErr);
+      }
+    }
+
     const result = await signInWithPopup(auth, provider);
     const user = result.user;
 
-    // Synchronize user profile into Firestore (WITHOUT PASSWORD OR PIN)
-    await syncFirebaseUserProfile(user);
+    // Synchronize user profile into Firestore safely (non-blocking for auth)
+    try {
+      await syncFirebaseUserProfile(user);
+    } catch (syncErr) {
+      console.warn('User profile sync notice (non-fatal):', syncErr);
+    }
+
     return user;
-  } catch (error) {
-    console.error('Error signing in with Google Firebase Auth:', error);
+  } catch (error: any) {
+    // If the user closed the popup window intentionally or cancelled, handle cleanly
+    if (error?.code === 'auth/popup-closed-by-user' || error?.code === 'auth/cancelled-popup-request') {
+      console.log('Google Sign-In popup closed by user or cancelled.');
+    } else {
+      console.error('Error signing in with Google Firebase Auth:', error);
+    }
     throw error;
   }
 }
@@ -196,7 +217,15 @@ export async function syncFirebaseUserProfile(
   const path = `users/${user.uid}`;
   try {
     const userDocRef = doc(db, 'users', user.uid);
-    const existingSnap = await getDoc(userDocRef);
+    let existingData: any = null;
+    try {
+      const existingSnap = await getDoc(userDocRef);
+      if (existingSnap.exists()) {
+        existingData = existingSnap.data();
+      }
+    } catch (readErr) {
+      console.warn('Could not read existing user doc (will create):', readErr);
+    }
 
     let role: UserRole = 'Customer';
     // Developer runtime email bootstrap
@@ -204,11 +233,11 @@ export async function syncFirebaseUserProfile(
       role = 'Owner';
     } else if (customRole) {
       role = customRole;
-    } else if (existingSnap.exists()) {
-      role = (existingSnap.data().role as UserRole) || 'Customer';
+    } else if (existingData?.role) {
+      role = existingData.role as UserRole;
     }
 
-    const payload = {
+    const payload: any = {
       uid: user.uid,
       email: user.email || '',
       nama: customName || user.displayName || 'Pengguna Warung',
@@ -217,16 +246,19 @@ export async function syncFirebaseUserProfile(
       avatar_url: user.photoURL || '',
       status: 'Aktif',
       updated_at: new Date().toISOString(),
-      ...(!existingSnap.exists() ? { created_at: new Date().toISOString() } : {}),
     };
 
+    if (!existingData) {
+      payload.created_at = new Date().toISOString();
+    }
+
     // Explicitly guarantee no password or pin is passed
-    delete (payload as any).password;
-    delete (payload as any).pin;
+    delete payload.password;
+    delete payload.pin;
 
     await setDoc(userDocRef, payload, { merge: true });
   } catch (error) {
-    handleFirestoreError(error, OperationType.WRITE, path);
+    console.warn('Sync user profile notice:', error);
   }
 }
 

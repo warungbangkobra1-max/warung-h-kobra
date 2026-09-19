@@ -560,6 +560,21 @@ export const INITIAL_USERS: Array<{
   created_at?: string;
 }> = [
   {
+    id: 'USR-RAYYAN',
+    nama: 'Rayyan (Owner Warung)',
+    username: 'rayyan',
+    email: 'rayyanarasid549@gmail.com',
+    role: 'Owner',
+    pin: '1234',
+    no_hp: '0812-9988-7766',
+    avatar_url: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+    status: 'Aktif',
+    total_transaksi: 210,
+    total_omset: 5800000,
+    terakhir_aktif: 'Sedang Aktif',
+    created_at: '2026-01-01T08:00:00Z',
+  },
+  {
     id: 'USR-001',
     nama: 'Bang Kobra (Owner)',
     username: 'owner',

@@ -181,13 +181,13 @@ service cloud.firestore {
       allow create: if isValidId(userId) && isValidUser(incoming()) && (
         isOwner() ||
         (isAdmin() && incoming().role in ['Kasir', 'Staff', 'Customer', 'kasir', 'staff', 'customer']) ||
-        (isSignedIn() && request.auth.uid == userId && incoming().role in ['Customer', 'customer'])
+        (isSignedIn() && request.auth.uid == userId && (incoming().role in ['Customer', 'customer'] || isOwner()))
       );
 
       allow update: if isValidId(userId) && isValidUser(incoming()) && (
         isOwner() ||
         (isAdmin() && existing().role != 'Owner' && incoming().role != 'Owner') ||
-        (isSignedIn() && request.auth.uid == userId && incoming().role == existing().role && incoming().diff(existing()).affectedKeys().hasOnly(['nama', 'no_hp', 'avatar_url', 'updated_at']))
+        (isSignedIn() && request.auth.uid == userId && incoming().role == existing().role && incoming().diff(existing()).affectedKeys().hasOnly(['nama', 'no_hp', 'avatar_url', 'email', 'status', 'updated_at']))
       );
 
       allow delete: if isValidId(userId) && isOwner();
