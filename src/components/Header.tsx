@@ -20,6 +20,8 @@ import {
 } from 'lucide-react';
 import { StoreSettings, SyncState, UserRole, WarungUser } from '../types';
 import { normalizeRole, getRoleBadgeInfo, ROLE_CONFIGS, NormalizedRole } from '../utils/rbac';
+import { PWAInstallButton } from './PWAInstallButton';
+import { OfflineSyncBanner } from './OfflineSyncBanner';
 
 interface HeaderProps {
   settings: StoreSettings;
@@ -141,19 +143,25 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           )}
 
+          {/* Offline/Online Network & Cloud Sync Indicator */}
+          <OfflineSyncBanner />
+
+          {/* PWA In-App Install Button */}
+          <PWAInstallButton variant="compact" />
+
           {/* Firebase Cloud Live Realtime Status Pill */}
           <div
             id="badge-firebase-live"
             title="Firebase Cloud Firestore: Terhubung & Siap Sinkron Realtime"
-            className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11px] font-extrabold bg-stone-900 border border-orange-500/30 text-stone-200 select-none shadow-sm"
+            className="hidden xl:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11px] font-extrabold bg-stone-900 border border-orange-500/30 text-stone-200 select-none shadow-sm"
           >
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
             </span>
             <Flame className="w-3.5 h-3.5 text-orange-400" />
-            <span className="hidden lg:inline text-orange-400">Firebase</span>
-            <span className="text-emerald-400 font-black">Live</span>
+            <span className="text-orange-400">Firebase</span>
+            <span className="text-emerald-400 font-black">Cloud</span>
           </div>
 
           {/* Sync Pill & Button */}

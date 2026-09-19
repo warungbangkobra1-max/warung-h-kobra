@@ -214,20 +214,16 @@ service cloud.firestore {
     }
 
     // ORDERS & POS TRANSACTIONS
-    // Customer can create self-orders (Pending) and track status; Kasir/Staff can process orders
+    // Customers can create QR self-orders, Cashier POS can record sales & sync offline orders
+    // Schema integrity, boundary checks, and ID poisoning protection enforced by isValidId & isValidOrder
     match /orders/{orderId} {
       allow read: if true;
 
-      allow create: if isValidId(orderId) && isValidOrder(incoming()) && (
-        isStaff() ||
-        incoming().status == 'Pending'
-      );
+      allow create: if isValidId(orderId) && isValidOrder(incoming());
 
       allow update: if isValidId(orderId) && isValidOrder(incoming()) && (
         isStaff() ||
-        incoming().diff(existing()).affectedKeys().hasOnly([
-          'status', 'updated_at', 'uang_diterima', 'kembalian', 'metode_pembayaran', 'kasir'
-        ])
+        incoming().id_transaksi == existing().id_transaksi
       );
 
       allow delete: if isValidId(orderId) && isAdmin();

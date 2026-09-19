@@ -491,7 +491,7 @@
     },
     "/orders/{orderId}": {
       "schema": "Order",
-      "description": "Transactions and customer QR orders. Status updates restricted to Kasir, Admin, and Owner."
+      "description": "Transactions and customer QR orders. Creation allowed for valid order schemas; updates permitted for staff or matching transaction ID; deletion restricted to Admin and Owner."
     },
     "/expenses/{expenseId}": {
       "schema": "Expense",

@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { ActiveTab, UserRole, WarungUser } from '../types';
 import { hasTabAccess, normalizeRole, getRoleBadgeInfo } from '../utils/rbac';
+import { PWAInstallButton } from './PWAInstallButton';
 
 interface NavigationProps {
   activeTab: ActiveTab;
@@ -442,6 +443,11 @@ export const Navigation: React.FC<NavigationProps> = ({
                   </button>
                 );
               })}
+            </div>
+
+            {/* PWA Install Button in Drawer */}
+            <div className="pt-2 border-t border-stone-800">
+              <PWAInstallButton variant="full" />
             </div>
 
             {/* Quick Warung Logo Upload in Drawer */}

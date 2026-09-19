@@ -145,6 +145,17 @@ export async function signInAnonymouslyCustomer(): Promise<FirebaseUser> {
   }
 }
 
+export async function ensureFirebaseAuth(): Promise<FirebaseUser | null> {
+  if (auth.currentUser) return auth.currentUser;
+  try {
+    const cred = await signInAnonymously(auth);
+    return cred.user;
+  } catch (error) {
+    console.warn('Notice: Firebase anonymous auth fallback:', error);
+    return null;
+  }
+}
+
 export async function firebaseSignOut(): Promise<void> {
   try {
     await signOut(auth);
@@ -157,6 +168,9 @@ export async function firebaseSignOut(): Promise<void> {
 export function subscribeToAuthState(callback: (user: FirebaseUser | null) => void): () => void {
   return onAuthStateChanged(auth, callback);
 }
+
+// Auto-initialize anonymous session if no session exists yet
+ensureFirebaseAuth().catch(() => {});
 
 /**
  * Synchronize Firebase Auth profile to Firestore `/users/{uid}`
@@ -212,6 +226,9 @@ export async function syncFirebaseUserProfile(
 export async function saveOrderToFirebase(order: Transaction): Promise<{ success: boolean; error?: string }> {
   const path = `orders/${order.id_transaksi}`;
   try {
+    if (!auth.currentUser) {
+      await ensureFirebaseAuth();
+    }
     const orderDocRef = doc(db, 'orders', order.id_transaksi);
     
     // Sanitize data for Firestore
