@@ -22,6 +22,8 @@ import {
   ChevronRight,
   Lock,
   User,
+  LogIn,
+  Globe,
 } from 'lucide-react';
 import { ActiveTab, UserRole, WarungUser } from '../types';
 import { hasTabAccess, normalizeRole, getRoleBadgeInfo } from '../utils/rbac';
@@ -86,6 +88,8 @@ export const Navigation: React.FC<NavigationProps> = ({
     { id: 'reports', label: 'Laporan', icon: BarChart3 },
     { id: 'users', label: 'Pengguna', icon: UserCheck },
     { id: 'qrcode_order', label: 'QR Code', icon: QrCode, badgeText: 'Takeaway' },
+    { id: 'public_menu', label: 'Menu Online', icon: Globe, badgeText: 'Web' },
+    { id: 'login', label: 'Menu Login', icon: LogIn, badgeText: 'Akses' },
     { id: 'settings', label: 'Pengaturan', icon: SettingsIcon },
   ];
 
@@ -120,6 +124,8 @@ export const Navigation: React.FC<NavigationProps> = ({
     { id: 'reports', label: 'Laporan', icon: BarChart3, desc: 'Omset penjualan & laba rugi' },
     { id: 'users', label: 'Pengguna', icon: UserCheck, desc: 'Kelola kasir & staf warung' },
     { id: 'qrcode_order', label: 'QR Code', icon: QrCode, desc: 'Standee QR Takeaway & Delivery', badgeText: 'Scan' },
+    { id: 'public_menu', label: 'Menu Online', icon: Globe, desc: 'Tautan menu web & pesanan WA', badgeText: 'Web' },
+    { id: 'login', label: 'Menu Login', icon: LogIn, desc: 'Portal masuk kasir & switch akun', badgeText: 'Akses' },
     { id: 'settings', label: 'Pengaturan', icon: SettingsIcon, desc: 'Data warung, struk & printer' },
     { id: 'ai_bot', label: 'Asisten AI', icon: Bot, desc: 'Analisis cerdas Warung KobraBot', badgeText: 'AI' },
   ];

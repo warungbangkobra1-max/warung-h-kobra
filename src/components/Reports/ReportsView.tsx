@@ -11,9 +11,11 @@ import {
   ShoppingBag,
   CreditCard,
   Eye,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { Transaction, Product, Expense } from '../../types';
 import { formatRupiah, formatDateIndo } from '../../utils/formatters';
+import { exportTransactionsToExcel } from '../../utils/excelHelper';
 
 interface ReportsViewProps {
   transactions: Transaction[];
@@ -137,6 +139,19 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
   }, [filteredTransactions]);
 
   // Export CSV
+  const handleExportExcel = () => {
+    if (filteredTransactions.length === 0) {
+      showToast('Tidak ada transaksi pada periode ini untuk diekspor.', 'error');
+      return;
+    }
+    exportTransactionsToExcel(
+      filteredTransactions,
+      filteredExpenses,
+      `Laporan_Keuangan_WarungBangKobra_${dateFilter}_${new Date().toISOString().split('T')[0]}.xlsx`
+    );
+    showToast(`Laporan Excel berhasil diunduh (${filteredTransactions.length} transaksi)!`, 'success');
+  };
+
   const handleExportCSV = () => {
     if (filteredTransactions.length === 0) {
       showToast('Tidak ada transaksi pada periode ini untuk diekspor.', 'error');
@@ -245,11 +260,22 @@ export const ReportsView: React.FC<ReportsViewProps> = ({
           </div>
 
           <button
+            id="btn-export-excel-reports"
+            onClick={handleExportExcel}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600/20 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-600/30 text-xs font-bold transition shadow-sm cursor-pointer"
+            title="Download Laporan Penjualan & Detail Menu ke format Excel (.xlsx)"
+          >
+            <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+            <span>Ekspor Excel (.xlsx)</span>
+          </button>
+
+          <button
             onClick={handleExportCSV}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-stone-900 border border-stone-800 text-stone-300 hover:bg-stone-800 text-xs font-bold transition"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-stone-900 border border-stone-800 text-stone-300 hover:bg-stone-800 text-xs font-bold transition cursor-pointer"
+            title="Download CSV"
           >
             <Download className="w-4 h-4" />
-            <span>Export CSV</span>
+            <span>CSV</span>
           </button>
         </div>
       </div>

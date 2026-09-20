@@ -19,6 +19,7 @@ import {
   Store,
   Flame,
   Volume2,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { Transaction, Product, StoreSettings } from '../../types';
 import {
@@ -29,6 +30,7 @@ import {
   buildTakeawayReadyWhatsAppMessage,
   openWhatsAppChat,
 } from '../../utils/formatters';
+import { exportTransactionsToExcel } from '../../utils/excelHelper';
 import { WhatsAppOrderView } from '../WhatsApp/WhatsAppOrderView';
 import { TakeawayQueueBoard } from './TakeawayQueueBoard';
 import { StorageService } from '../../services/storage';
@@ -166,12 +168,34 @@ export const OrdersManagementView: React.FC<OrdersManagementViewProps> = ({
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              type="button"
+              id="btn-export-excel-orders"
+              onClick={() => {
+                if (filteredTransactions.length === 0) {
+                  showToast('Belum ada data pesanan untuk diekspor.', 'info');
+                  return;
+                }
+                exportTransactionsToExcel(
+                  filteredTransactions,
+                  [],
+                  `Daftar_Pesanan_WarungBangKobra_${new Date().toISOString().split('T')[0]}.xlsx`
+                );
+                showToast(`Berhasil mengekspor ${filteredTransactions.length} pesanan ke Excel (.xlsx)!`, 'success');
+              }}
+              className="min-h-[48px] px-4 rounded-2xl bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 font-extrabold text-xs flex items-center gap-2 transition cursor-pointer shadow-sm"
+              title="Download daftar pesanan ke Excel"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+              <span>Ekspor Excel</span>
+            </button>
+
             {onNavigateToQR && (
               <button
                 type="button"
                 onClick={onNavigateToQR}
-                className="min-h-[48px] px-4 rounded-2xl bg-stone-900 hover:bg-stone-800 text-orange-400 border border-stone-700 font-extrabold text-xs flex items-center gap-2 transition"
+                className="min-h-[48px] px-4 rounded-2xl bg-stone-900 hover:bg-stone-800 text-orange-400 border border-stone-700 font-extrabold text-xs flex items-center gap-2 transition cursor-pointer"
               >
                 <span>QR Code Menu</span>
                 <ArrowUpRight className="w-4 h-4" />

@@ -10,9 +10,12 @@ import {
   MapPin,
   X,
   Send,
+  Download,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { Customer, StoreSettings, Transaction } from '../../types';
 import { formatRupiah, openWhatsAppChat } from '../../utils/formatters';
+import { exportCustomersToExcel } from '../../utils/excelHelper';
 
 interface CustomersViewProps {
   customers: Customer[];
@@ -128,6 +131,15 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
     showToast('Membuka WhatsApp...', 'success');
   };
 
+  const handleExportExcel = () => {
+    if (customers.length === 0) {
+      showToast('Belum ada data pelanggan untuk diekspor.', 'info');
+      return;
+    }
+    exportCustomersToExcel(customers);
+    showToast(`Berhasil mengekspor ${customers.length} data pelanggan ke Excel!`, 'success');
+  };
+
   return (
     <div className="max-w-7xl mx-auto p-4 sm:p-6 space-y-6">
       {/* Header */}
@@ -142,14 +154,26 @@ export const CustomersView: React.FC<CustomersViewProps> = ({
           </p>
         </div>
 
-        <button
-          id="btn-add-customer"
-          onClick={openAddModal}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-extrabold text-xs shadow-lg shadow-amber-950/30 transition active:scale-95"
-        >
-          <Plus className="w-4 h-4" />
-          <span>+ Tambah Pelanggan</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            id="btn-export-excel-customers"
+            onClick={handleExportExcel}
+            className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-emerald-600/20 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-600/30 text-xs font-bold transition shadow-sm cursor-pointer"
+            title="Download daftar pelanggan ke format Excel (.xlsx)"
+          >
+            <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+            <span>Ekspor Excel</span>
+          </button>
+
+          <button
+            id="btn-add-customer"
+            onClick={openAddModal}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-extrabold text-xs shadow-lg shadow-amber-950/30 transition active:scale-95 cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>+ Tambah Pelanggan</span>
+          </button>
+        </div>
       </div>
 
       {/* Search */}

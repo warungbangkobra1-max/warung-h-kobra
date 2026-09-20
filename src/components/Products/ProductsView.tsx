@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import {
   Plus,
   Search,
@@ -14,10 +14,17 @@ import {
   Filter,
   Flame,
   RefreshCw,
+  FileSpreadsheet,
+  FileDown,
 } from 'lucide-react';
 import { Product, ProductCategory } from '../../types';
 import { formatRupiah } from '../../utils/formatters';
 import { syncProductsToFirebase } from '../../services/firebase';
+import {
+  exportProductsToExcel,
+  downloadProductExcelTemplate,
+  parseProductsFromExcel,
+} from '../../utils/excelHelper';
 
 interface ProductsViewProps {
   products: Product[];
@@ -171,6 +178,74 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
     }
   };
 
+  const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
+  const [isImportingExcel, setIsImportingExcel] = useState(false);
+  const excelFileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleExportExcel = () => {
+    if (products.length === 0) {
+      showToast('Tidak ada data menu untuk diekspor.', 'info');
+      return;
+    }
+    exportProductsToExcel(products);
+    showToast(`Berhasil mengekspor ${products.length} menu ke file Excel (.xlsx)!`, 'success');
+    setIsExportMenuOpen(false);
+  };
+
+  const handleDownloadTemplate = () => {
+    downloadProductExcelTemplate();
+    showToast('Template Excel untuk impor menu berhasil diunduh.', 'success');
+    setIsExportMenuOpen(false);
+  };
+
+  const handleImportExcelFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsImportingExcel(true);
+    try {
+      const { products: imported, errors } = await parseProductsFromExcel(file);
+      if (imported.length === 0) {
+        showToast(errors[0] || 'Tidak ada data produk valid yang ditemukan dalam file Excel.', 'error');
+      } else {
+        // Merge or replace: add new ones or update existing by SKU or Name
+        const updatedList = [...products];
+        let addedCount = 0;
+        let updatedCount = 0;
+
+        imported.forEach((newP) => {
+          const existingIdx = updatedList.findIndex(
+            (p) => (p.sku && p.sku === newP.sku) || p.nama.toLowerCase() === newP.nama.toLowerCase()
+          );
+          if (existingIdx >= 0) {
+            updatedList[existingIdx] = {
+              ...updatedList[existingIdx],
+              ...newP,
+              id: updatedList[existingIdx].id,
+            };
+            updatedCount++;
+          } else {
+            updatedList.push(newP);
+            addedCount++;
+          }
+        });
+
+        onImportProducts(updatedList);
+        showToast(
+          `Sukses impor Excel: ${addedCount} menu baru ditambahkan, ${updatedCount} menu diperbarui!`,
+          'success'
+        );
+      }
+    } catch (err: any) {
+      showToast(err?.message || 'Gagal membaca file Excel.', 'error');
+    } finally {
+      setIsImportingExcel(false);
+      if (excelFileInputRef.current) {
+        excelFileInputRef.current.value = '';
+      }
+    }
+  };
+
   const handleExportJSON = () => {
     const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(products, null, 2));
     const downloadAnchor = document.createElement('a');
@@ -179,7 +254,8 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
-    showToast('Data produk berhasil diekspor!', 'success');
+    showToast('Data produk berhasil diekspor ke format JSON!', 'success');
+    setIsExportMenuOpen(false);
   };
 
   const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -192,7 +268,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
         const parsed = JSON.parse(event.target?.result as string);
         if (Array.isArray(parsed)) {
           onImportProducts(parsed);
-          showToast(`Berhasil mengimpor ${parsed.length} produk!`, 'success');
+          showToast(`Berhasil mengimpor ${parsed.length} produk dari JSON!`, 'success');
         } else {
           showToast('Format file JSON tidak valid (harus array produk).', 'error');
         }
@@ -217,7 +293,7 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             id="btn-sync-firebase-products-toolbar"
             onClick={handleSyncFirebase}
@@ -229,24 +305,64 @@ export const ProductsView: React.FC<ProductsViewProps> = ({
             <span className="hidden sm:inline">{isSyncingFirebase ? 'Menyinkronkan...' : 'Sinkron Firebase'}</span>
           </button>
 
-          <label className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-stone-900 border border-stone-800 text-stone-300 hover:bg-stone-800 text-xs font-bold cursor-pointer transition">
-            <Upload className="w-4 h-4" />
-            <span className="hidden sm:inline">Import</span>
-            <input type="file" accept=".json" onChange={handleImportFile} className="hidden" />
-          </label>
+          {/* Import Dropdown / Button Group */}
+          <div className="flex items-center gap-1">
+            <label
+              id="btn-import-excel-products"
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-950/50 border border-emerald-800/60 text-emerald-400 hover:bg-emerald-900/50 text-xs font-bold cursor-pointer transition shadow-sm ${
+                isImportingExcel ? 'opacity-50 pointer-events-none' : ''
+              }`}
+              title="Impor menu dari file Excel (.xlsx / .xls)"
+            >
+              <FileSpreadsheet className={`w-4 h-4 ${isImportingExcel ? 'animate-spin' : ''}`} />
+              <span>{isImportingExcel ? 'Memproses...' : 'Impor Excel'}</span>
+              <input
+                ref={excelFileInputRef}
+                type="file"
+                accept=".xlsx, .xls"
+                onChange={handleImportExcelFile}
+                className="hidden"
+                disabled={isImportingExcel}
+              />
+            </label>
 
+            <label
+              className="flex items-center gap-1 px-2.5 py-2 rounded-xl bg-stone-900 border border-stone-800 text-stone-400 hover:text-stone-200 hover:bg-stone-800 text-xs font-medium cursor-pointer transition"
+              title="Impor dari JSON (opsi cadangan)"
+            >
+              <Upload className="w-3.5 h-3.5" />
+              <span className="hidden md:inline text-[11px]">JSON</span>
+              <input type="file" accept=".json" onChange={handleImportFile} className="hidden" />
+            </label>
+          </div>
+
+          {/* Export Group with Dropdown */}
+          <div className="relative">
+            <button
+              id="btn-export-excel-products"
+              onClick={handleExportExcel}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600/20 border border-emerald-500/40 text-emerald-300 hover:bg-emerald-600/30 text-xs font-bold transition shadow-sm cursor-pointer"
+              title="Download seluruh menu ke format Excel (.xlsx)"
+            >
+              <Download className="w-4 h-4 text-emerald-400" />
+              <span>Ekspor Excel</span>
+            </button>
+          </div>
+
+          {/* Download Template Button */}
           <button
-            onClick={handleExportJSON}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-stone-900 border border-stone-800 text-stone-300 hover:bg-stone-800 text-xs font-bold transition"
+            onClick={handleDownloadTemplate}
+            className="flex items-center gap-1.5 px-2.5 py-2 rounded-xl bg-stone-900 border border-stone-800 text-stone-300 hover:bg-stone-800 hover:text-amber-400 text-xs font-medium transition cursor-pointer"
+            title="Download Template Format Excel untuk isi daftar menu"
           >
-            <Download className="w-4 h-4" />
-            <span className="hidden sm:inline">Export</span>
+            <FileDown className="w-3.5 h-3.5 text-amber-500" />
+            <span className="hidden xl:inline text-[11px]">Template Excel</span>
           </button>
 
           <button
             id="btn-add-product"
             onClick={openAddModal}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-extrabold text-xs shadow-lg shadow-amber-950/30 transition active:scale-95"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-extrabold text-xs shadow-lg shadow-amber-950/30 transition active:scale-95 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Tambah Produk</span>

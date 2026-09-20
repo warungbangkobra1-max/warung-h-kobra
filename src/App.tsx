@@ -31,11 +31,14 @@ import { AIBotDrawer } from './components/AIBot/AIBotDrawer';
 import { ReceiptModal } from './components/POS/ReceiptModal';
 import { QRCodeOrderManagerView } from './components/QRCodeOrder/QRCodeOrderManagerView';
 import { CustomerOrderView } from './components/CustomerOrder/CustomerOrderView';
+import { PublicMenuCustomerView } from './components/PublicMenu/PublicMenuCustomerView';
+import { PublicMenuManagerView } from './components/PublicMenu/PublicMenuManagerView';
 import { CategoriesView } from './components/Categories/CategoriesView';
 import { UsersManagementView } from './components/Users/UsersManagementView';
 import { OrdersManagementView } from './components/Orders/OrdersManagementView';
 import { ProtectedRoute } from './components/Auth/ProtectedRoute';
 import { LoginModal } from './components/Auth/LoginModal';
+import { LoginView } from './components/Auth/LoginView';
 import { UserProfileModal } from './components/Auth/UserProfileModal';
 import { hasTabAccess, normalizeRole, ROLE_CONFIGS, getTabLabel } from './utils/rbac';
 import { CheckCircle2, AlertCircle, Info, X, Bot, Sparkles, Bell, ArrowRight } from 'lucide-react';
@@ -111,10 +114,28 @@ export default function App() {
   const [isCustomerMode, setIsCustomerMode] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
       const search = window.location.search;
+      // If URL explicitly requests public menu, do not trigger QR standee customer mode
+      if (search.includes('menu=') || search.includes('mode=public') || search.includes('order=menu')) {
+        return false;
+      }
       return (
         search.includes('order=') ||
         search.includes('mode=order') ||
         search.includes('scan=')
+      );
+    }
+    return false;
+  });
+
+  // Public Online Web Menu Mode (from social media link / public menu URL)
+  const [isPublicMenuMode, setIsPublicMenuMode] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const search = window.location.search;
+      return (
+        search.includes('menu=public') ||
+        search.includes('menu=online') ||
+        search.includes('mode=public') ||
+        search.includes('order=menu')
       );
     }
     return false;
@@ -603,6 +624,28 @@ export default function App() {
   // Low Stock Count for Badge
   const lowStockCount = products.filter((p) => p.stok <= p.stok_minimum).length;
 
+  // Render Public Online Web Menu Mode (from bio link or shared WhatsApp link)
+  if (isPublicMenuMode) {
+    return (
+      <PublicMenuCustomerView
+        products={products}
+        settings={settings}
+        onOpenPOS={() => {
+          setIsPublicMenuMode(false);
+          setActiveTab('pos');
+          if (typeof window !== 'undefined') {
+            window.history.replaceState({}, '', window.location.pathname);
+          }
+        }}
+        onOrderCreated={(newTx) => {
+          setTransactions((prev) => [newTx, ...prev]);
+          setProducts(StorageService.getProducts());
+        }}
+        showToast={showToast}
+      />
+    );
+  }
+
   // Render Customer Self-Order Mode directly when scanned via QR Code
   if (isCustomerMode) {
     return (
@@ -639,6 +682,7 @@ export default function App() {
         currentUser={currentUser}
         onOpenProfile={() => setIsProfileModalOpen(true)}
         onOpenLogin={() => setIsLoginModalOpen(true)}
+        onNavigateToLogin={() => setActiveTab('login')}
         onLogout={handleLogout}
         onChangeRole={handleRoleChange}
         onRoleChange={handleRoleChange}
@@ -717,8 +761,8 @@ export default function App() {
               activeTab={activeTab}
               userRole={effectiveRole}
               tabLabel={getTabLabel(activeTab)}
-              onOpenLogin={() => setIsLoginModalOpen(true)}
-              onSwitchAccount={() => setIsLoginModalOpen(true)}
+              onOpenLogin={() => setActiveTab('login')}
+              onSwitchAccount={() => setActiveTab('login')}
               onOpenProfile={() => setIsProfileModalOpen(true)}
               onNavigate={setActiveTab}
             />
@@ -760,6 +804,18 @@ export default function App() {
               onOpenCustomerView={(type) => {
                 setCustomerOrderType(type);
                 setIsCustomerMode(true);
+              }}
+              showToast={showToast}
+            />
+          )}
+
+          {activeTab === 'public_menu' && (
+            <PublicMenuManagerView
+              products={products}
+              settings={settings}
+              onSaveSettings={handleSaveSettings}
+              onOpenCustomerView={() => {
+                setIsPublicMenuMode(true);
               }}
               showToast={showToast}
             />
@@ -843,6 +899,17 @@ export default function App() {
               products={products}
               transactions={transactions}
               settings={settings}
+              onNavigate={setActiveTab}
+              showToast={showToast}
+            />
+          )}
+
+          {activeTab === 'login' && (
+            <LoginView
+              currentUser={currentUser}
+              settings={settings}
+              onLoginSuccess={handleLoginSuccess}
+              onLogout={handleLogout}
               onNavigate={setActiveTab}
               showToast={showToast}
             />
@@ -932,7 +999,7 @@ export default function App() {
           onLogout={handleLogout}
           onOpenLogin={() => {
             setIsProfileModalOpen(false);
-            setIsLoginModalOpen(true);
+            setActiveTab('login');
           }}
         />
       )}

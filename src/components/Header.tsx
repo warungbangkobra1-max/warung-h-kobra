@@ -31,6 +31,7 @@ interface HeaderProps {
   currentUser?: WarungUser | null;
   onOpenProfile?: () => void;
   onOpenLogin?: () => void;
+  onNavigateToLogin?: () => void;
   onLogout?: () => void;
   onChangeRole?: (role: UserRole) => void;
   onRoleChange?: (role: UserRole) => void;
@@ -47,6 +48,7 @@ export const Header: React.FC<HeaderProps> = ({
   currentUser,
   onOpenProfile,
   onOpenLogin,
+  onNavigateToLogin,
   onLogout,
   onChangeRole,
   onRoleChange,
@@ -254,7 +256,13 @@ export const Header: React.FC<HeaderProps> = ({
               <button
                 type="button"
                 id="btn-header-login"
-                onClick={onOpenLogin}
+                onClick={() => {
+                  if (onNavigateToLogin) {
+                    onNavigateToLogin();
+                  } else if (onOpenLogin) {
+                    onOpenLogin();
+                  }
+                }}
                 className="min-h-[40px] flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black bg-red-600 hover:bg-red-500 text-white shadow-md shadow-red-950/50 transition cursor-pointer"
               >
                 <LogIn className="w-4 h-4" />
@@ -269,7 +277,20 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 <div className="px-3.5 py-1.5 text-[11px] text-stone-400 font-bold border-b border-stone-800 flex items-center justify-between">
                   <span>Pilih Peran (RBAC 5 Role):</span>
-                  <span className="text-[10px] text-orange-400 font-mono">Live Switch</span>
+                  {onNavigateToLogin ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowRoleMenu(false);
+                        onNavigateToLogin();
+                      }}
+                      className="text-[10px] text-orange-400 hover:underline font-bold"
+                    >
+                      Menu Login
+                    </button>
+                  ) : (
+                    <span className="text-[10px] text-orange-400 font-mono">Live Switch</span>
+                  )}
                 </div>
 
                 <div className="py-1 space-y-0.5">

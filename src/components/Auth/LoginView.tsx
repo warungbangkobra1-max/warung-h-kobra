@@ -1,0 +1,803 @@
+import React, { useState } from 'react';
+import {
+  Lock,
+  User,
+  Key,
+  ShieldCheck,
+  CheckCircle2,
+  AlertCircle,
+  Eye,
+  EyeOff,
+  Flame,
+  UserPlus,
+  LogIn,
+  Sparkles,
+  Phone,
+  ArrowRight,
+  Globe,
+  ExternalLink,
+  Copy,
+  Check,
+  Crown,
+  LogOut,
+  ChevronRight,
+  Shield,
+  Layers,
+  ArrowLeft,
+} from 'lucide-react';
+import { WarungUser, UserRole, StoreSettings, ActiveTab } from '../../types';
+import { StorageService } from '../../services/storage';
+import { signInWithGoogle } from '../../services/firebase';
+import {
+  normalizeRole,
+  getRoleBadgeInfo,
+  ROLE_CONFIGS,
+  NormalizedRole,
+  getDefaultTabForRole,
+} from '../../utils/rbac';
+
+interface LoginViewProps {
+  currentUser?: WarungUser | null;
+  settings?: StoreSettings;
+  onLoginSuccess: (user: WarungUser) => void;
+  onLogout?: () => void;
+  onNavigate?: (tab: ActiveTab) => void;
+  showToast?: (msg: string, type?: 'success' | 'error' | 'info') => void;
+}
+
+export const LoginView: React.FC<LoginViewProps> = ({
+  currentUser,
+  settings,
+  onLoginSuccess,
+  onLogout,
+  onNavigate,
+  showToast = (_msg: string, _type?: 'success' | 'error' | 'info') => {},
+}) => {
+  const [activeTab, setActiveTab] = useState<'quick_demo' | 'form_login' | 'register_customer'>('form_login');
+
+  // Form State
+  const [identifier, setIdentifier] = useState('');
+  const [pin, setPin] = useState('');
+  const [showPin, setShowPin] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [copiedDomain, setCopiedDomain] = useState(false);
+
+  // Authentication Troubleshooting State
+  const [authTrouble, setAuthTrouble] = useState<{
+    type: 'popup_blocked' | 'unauthorized_domain' | 'other';
+    title: string;
+    description: string;
+    domain?: string;
+  } | null>(null);
+
+  // Register Customer State
+  const [regName, setRegName] = useState('');
+  const [regPhone, setRegPhone] = useState('');
+  const [regPin, setRegPin] = useState('');
+
+  const users = StorageService.getUsers();
+
+  const handleGoogleLogin = async () => {
+    setIsLoading(true);
+    setErrorMsg('');
+    setAuthTrouble(null);
+    try {
+      const fbUser = await signInWithGoogle();
+      let assignedRole: UserRole = 'Customer';
+      if (fbUser.email?.toLowerCase() === 'rayyanarasid549@gmail.com') {
+        assignedRole = 'Owner';
+      }
+
+      const googleWarungUser: WarungUser = {
+        id: fbUser.uid,
+        nama:
+          fbUser.displayName ||
+          (fbUser.email?.toLowerCase() === 'rayyanarasid549@gmail.com'
+            ? 'Rayyan (Owner Warung)'
+            : 'Akun Google Firebase'),
+        username: fbUser.email?.split('@')[0] || `user_${fbUser.uid.slice(0, 6)}`,
+        email: fbUser.email || '',
+        role: assignedRole,
+        pin: '1234',
+        no_hp: fbUser.phoneNumber || '',
+        avatar_url: fbUser.photoURL || undefined,
+        status: 'Aktif',
+        total_transaksi: 0,
+        total_omset: 0,
+        terakhir_aktif: 'Baru Saja',
+        created_at: new Date().toISOString(),
+      };
+
+      StorageService.addUser(googleWarungUser);
+      StorageService.setAuthUser(googleWarungUser);
+      onLoginSuccess(googleWarungUser);
+      setIsLoading(false);
+      showToast(`Berhasil masuk sebagai ${googleWarungUser.nama} (${assignedRole})!`, 'success');
+      if (onNavigate) {
+        onNavigate(getDefaultTabForRole(assignedRole));
+      }
+    } catch (err: any) {
+      setIsLoading(false);
+      console.error('Google Sign In Error:', err);
+      const code = err?.code || '';
+      const msg = err?.message || String(err);
+
+      if (code === 'auth/unauthorized-domain') {
+        const currentDomain = window.location.hostname;
+        setAuthTrouble({
+          type: 'unauthorized_domain',
+          title: 'Domain Belum Didaftarkan di Firebase',
+          description: `Domain "${currentDomain}" perlu dimasukkan ke Firebase Console > Authentication > Settings > Authorized Domains agar Google Login aktif di preview ini.`,
+          domain: currentDomain,
+        });
+      } else if (code === 'auth/popup-blocked') {
+        setAuthTrouble({
+          type: 'popup_blocked',
+          title: 'Popup Login Diblokir Browser / iFrame',
+          description:
+            'Browser Anda memblokir jendela popup Google Sign-In dalam mode preview iframe. Buka aplikasi di tab baru atau gunakan login instant PIN/Akun.',
+        });
+      } else if (code === 'auth/popup-closed-by-user') {
+        setErrorMsg('Jendela login ditutup sebelum selesai. Silakan coba kembali.');
+      } else {
+        setErrorMsg(msg || 'Gagal login dengan Google. Periksa koneksi internet Anda.');
+      }
+    }
+  };
+
+  const handleInstantGoogleOwnerLogin = () => {
+    setIsLoading(true);
+    const rayyanUser: WarungUser = {
+      id: 'USR-RAYYAN',
+      nama: 'Rayyan (Owner Warung)',
+      username: 'rayyan',
+      email: 'rayyanarasid549@gmail.com',
+      role: 'Owner',
+      pin: '1234',
+      no_hp: '0812-9988-7766',
+      avatar_url:
+        'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
+      status: 'Aktif',
+      total_transaksi: 210,
+      total_omset: 5800000,
+      terakhir_aktif: 'Sedang Aktif',
+      created_at: new Date().toISOString(),
+    };
+
+    StorageService.addUser(rayyanUser);
+    StorageService.setAuthUser(rayyanUser);
+    onLoginSuccess(rayyanUser);
+    setIsLoading(false);
+    showToast('Berhasil masuk sebagai Rayyan (Owner - rayyanarasid549@gmail.com)!', 'success');
+    if (onNavigate) {
+      onNavigate('dashboard');
+    }
+  };
+
+  const handleCopyDomain = () => {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(window.location.hostname);
+      setCopiedDomain(true);
+      showToast('Domain berhasil disalin!', 'success');
+      setTimeout(() => setCopiedDomain(false), 2000);
+    }
+  };
+
+  const handleOpenInNewTab = () => {
+    window.open(window.location.href, '_blank');
+  };
+
+  const handleQuickLogin = (user: WarungUser) => {
+    setIsLoading(true);
+    setTimeout(() => {
+      StorageService.setAuthUser(user);
+      onLoginSuccess(user);
+      setIsLoading(false);
+      showToast(`Berhasil masuk sebagai ${user.nama} (${user.role})!`, 'success');
+      if (onNavigate) {
+        onNavigate(getDefaultTabForRole(user.role));
+      }
+    }, 200);
+  };
+
+  const handleFormLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg('');
+
+    if (!identifier.trim() || !pin.trim()) {
+      setErrorMsg('Username/No. HP dan PIN wajib diisi!');
+      return;
+    }
+
+    setIsLoading(true);
+    const cleanId = identifier.trim().toLowerCase();
+    const cleanPin = pin.trim();
+
+    // Match by username, phone, or email
+    const matched = users.find(
+      (u) =>
+        (u.username.toLowerCase() === cleanId ||
+          u.no_hp?.replace(/\D/g, '') === cleanId.replace(/\D/g, '') ||
+          u.email?.toLowerCase() === cleanId) &&
+        u.pin === cleanPin
+    );
+
+    if (!matched) {
+      setIsLoading(false);
+      setErrorMsg('Username/No. HP atau PIN tidak sesuai. Silakan periksa kembali!');
+      return;
+    }
+
+    if (matched.status === 'Nonaktif') {
+      setIsLoading(false);
+      setErrorMsg('Akun ini sedang dinonaktifkan oleh administrator.');
+      return;
+    }
+
+    // Success
+    StorageService.setAuthUser(matched);
+    onLoginSuccess(matched);
+    setIsLoading(false);
+    showToast(`Selamat datang kembali, ${matched.nama}!`, 'success');
+    if (onNavigate) {
+      onNavigate(getDefaultTabForRole(matched.role));
+    }
+  };
+
+  const handleRegisterCustomer = (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg('');
+
+    if (!regName.trim() || !regPhone.trim() || !regPin.trim()) {
+      setErrorMsg('Nama, Nomor WhatsApp, dan PIN wajib diisi untuk pendaftaran!');
+      return;
+    }
+
+    if (regPin.trim().length < 4) {
+      setErrorMsg('PIN keamanan minimal 4 digit angka!');
+      return;
+    }
+
+    setIsLoading(true);
+    const cleanPhone = regPhone.replace(/\D/g, '');
+
+    // Check existing customer phone
+    const existing = users.find(
+      (u) => u.no_hp?.replace(/\D/g, '') === cleanPhone
+    );
+
+    if (existing) {
+      setIsLoading(false);
+      setErrorMsg('Nomor WhatsApp ini sudah terdaftar. Silakan gunakan tab Masuk Akun!');
+      return;
+    }
+
+    const newCustomerId = `CUST-${Date.now().toString().slice(-6)}`;
+    const newCustomerUser: WarungUser = {
+      id: newCustomerId,
+      nama: regName.trim(),
+      username: `cust_${cleanPhone.slice(-4) || 'user'}`,
+      role: 'Customer',
+      pin: regPin.trim(),
+      no_hp: regPhone.trim(),
+      avatar_url: `https://api.dicebear.com/7.x/bottts/svg?seed=${regName.trim()}`,
+      status: 'Aktif',
+      total_transaksi: 0,
+      total_omset: 0,
+      terakhir_aktif: 'Baru Saja',
+      created_at: new Date().toISOString(),
+    };
+
+    StorageService.addUser(newCustomerUser);
+    StorageService.setAuthUser(newCustomerUser);
+    onLoginSuccess(newCustomerUser);
+    setIsLoading(false);
+    showToast(`Pendaftaran berhasil! Selamat datang, ${newCustomerUser.nama}`, 'success');
+    if (onNavigate) {
+      onNavigate('qrcode_order');
+    }
+  };
+
+  const currentRoleBadge = currentUser ? getRoleBadgeInfo(currentUser.role) : null;
+
+  return (
+    <div className="flex-1 overflow-y-auto bg-stone-950 p-4 sm:p-6 lg:p-8 min-h-screen flex flex-col justify-center items-center">
+      <div className="w-full max-w-4xl space-y-6">
+        {/* Top Header Card */}
+        <div className="text-center space-y-2">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-red-950/60 border border-red-800/60 text-red-400 text-xs font-black uppercase tracking-wider shadow-inner">
+            <ShieldCheck className="w-4 h-4 text-orange-400" />
+            <span>Portal Akses & Keamanan Warung</span>
+          </div>
+          <h1 className="text-2xl sm:text-4xl font-black text-white tracking-tight">
+            Menu Login & Hak Akses
+          </h1>
+          <p className="text-xs sm:text-sm text-stone-400 max-w-xl mx-auto">
+            Masuk ke sistem POS Warung Bang Kobra dengan peran Anda untuk mengakses Kasir, Manajemen Stok, Laporan Keuangan, dan Pengaturan.
+          </p>
+        </div>
+
+        {/* Current Active Account Card (if logged in) */}
+        {currentUser && (
+          <div className="bg-stone-900 border-2 border-orange-500/40 rounded-3xl p-4 sm:p-6 shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-4 min-w-0 w-full sm:w-auto">
+              <div className="w-14 h-14 rounded-2xl bg-stone-800 border-2 border-stone-700 overflow-hidden shrink-0 flex items-center justify-center text-white text-lg font-black">
+                {currentUser.avatar_url ? (
+                  <img src={currentUser.avatar_url} alt={currentUser.nama} className="w-full h-full object-cover" />
+                ) : (
+                  currentUser.nama?.charAt(0) || 'U'
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-black text-emerald-400 bg-emerald-950/60 border border-emerald-800/60 px-2 py-0.5 rounded-md flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    Sedang Masuk
+                  </span>
+                  {currentRoleBadge && (
+                    <span
+                      className={`text-[11px] font-black px-2.5 py-0.5 rounded-full border ${currentRoleBadge.badgeBg} ${currentRoleBadge.badgeText} ${currentRoleBadge.badgeBorder}`}
+                    >
+                      {currentRoleBadge.badge}
+                    </span>
+                  )}
+                </div>
+                <h3 className="text-base sm:text-lg font-black text-white truncate mt-1">
+                  {currentUser.nama}
+                </h3>
+                <p className="text-xs text-stone-400 font-mono truncate">
+                  @{currentUser.username} {currentUser.email ? `• ${currentUser.email}` : ''}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2.5 w-full sm:w-auto shrink-0 justify-end">
+              {onNavigate && (
+                <button
+                  type="button"
+                  id="btn-goto-default-tab"
+                  onClick={() => onNavigate(getDefaultTabForRole(currentUser.role))}
+                  className="flex-1 sm:flex-initial min-h-[44px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-red-600 hover:bg-red-500 active:scale-95 text-white font-extrabold text-xs shadow-lg shadow-red-950/50 transition cursor-pointer"
+                >
+                  <span>Buka Menu Utama</span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              )}
+              {onLogout && (
+                <button
+                  type="button"
+                  id="btn-logout-from-login-view"
+                  onClick={onLogout}
+                  className="min-h-[44px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-stone-950 hover:bg-stone-800 active:scale-95 text-rose-400 border border-stone-800 font-extrabold text-xs transition cursor-pointer"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span className="hidden sm:inline">Keluar</span>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Main Login / Switch Account Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Left / Main Section: Authentication Modes */}
+          <div className="lg:col-span-8 bg-stone-900 border-2 border-stone-800 rounded-3xl p-5 sm:p-7 shadow-2xl space-y-6">
+            {/* Tabs Navigation */}
+            <div className="flex items-center p-1.5 rounded-2xl bg-stone-950 border border-stone-800 gap-1">
+              <button
+                type="button"
+                id="tab-login-form"
+                onClick={() => {
+                  setActiveTab('form_login');
+                  setErrorMsg('');
+                  setAuthTrouble(null);
+                }}
+                className={`flex-1 min-h-[44px] py-2.5 px-3 rounded-xl text-xs sm:text-sm font-black flex items-center justify-center gap-2 transition cursor-pointer ${
+                  activeTab === 'form_login'
+                    ? 'bg-red-600 text-white shadow-md shadow-red-950/50 scale-[1.01]'
+                    : 'text-stone-400 hover:text-stone-200 hover:bg-stone-900'
+                }`}
+              >
+                <Key className="w-4 h-4" />
+                <span>Masuk Akun / PIN</span>
+              </button>
+
+              <button
+                type="button"
+                id="tab-quick-demo"
+                onClick={() => {
+                  setActiveTab('quick_demo');
+                  setErrorMsg('');
+                  setAuthTrouble(null);
+                }}
+                className={`flex-1 min-h-[44px] py-2.5 px-3 rounded-xl text-xs sm:text-sm font-black flex items-center justify-center gap-2 transition cursor-pointer ${
+                  activeTab === 'quick_demo'
+                    ? 'bg-red-600 text-white shadow-md shadow-red-950/50 scale-[1.01]'
+                    : 'text-stone-400 hover:text-stone-200 hover:bg-stone-900'
+                }`}
+              >
+                <Flame className="w-4 h-4 text-orange-400" />
+                <span>1-Click Switch</span>
+              </button>
+
+              <button
+                type="button"
+                id="tab-register-customer"
+                onClick={() => {
+                  setActiveTab('register_customer');
+                  setErrorMsg('');
+                  setAuthTrouble(null);
+                }}
+                className={`flex-1 min-h-[44px] py-2.5 px-3 rounded-xl text-xs sm:text-sm font-black flex items-center justify-center gap-2 transition cursor-pointer ${
+                  activeTab === 'register_customer'
+                    ? 'bg-red-600 text-white shadow-md shadow-red-950/50 scale-[1.01]'
+                    : 'text-stone-400 hover:text-stone-200 hover:bg-stone-900'
+                }`}
+              >
+                <UserPlus className="w-4 h-4" />
+                <span>Daftar Pelanggan</span>
+              </button>
+            </div>
+
+            {/* Error Message Alert */}
+            {errorMsg && (
+              <div className="p-3.5 rounded-2xl bg-rose-950/80 border border-rose-800 text-rose-200 text-xs flex items-center gap-2.5 animate-in fade-in">
+                <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />
+                <span className="font-semibold">{errorMsg}</span>
+              </div>
+            )}
+
+            {/* Troubleshooting Box */}
+            {authTrouble && (
+              <div className="p-4 rounded-2xl bg-amber-950/40 border-2 border-amber-600/40 text-stone-200 text-xs space-y-3 animate-in fade-in">
+                <div className="flex items-start gap-2.5">
+                  <Globe className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+                  <div className="space-y-1">
+                    <h4 className="font-black text-amber-300 text-sm">{authTrouble.title}</h4>
+                    <p className="text-stone-300 text-xs leading-relaxed">{authTrouble.description}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-amber-800/40">
+                  {authTrouble.domain && (
+                    <button
+                      type="button"
+                      onClick={handleCopyDomain}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-stone-900 hover:bg-stone-800 border border-stone-700 text-white text-[11px] font-bold cursor-pointer"
+                    >
+                      {copiedDomain ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                      <span>{copiedDomain ? 'Tersalin!' : 'Salin Domain'}</span>
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={handleOpenInNewTab}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-stone-900 hover:bg-stone-800 border border-stone-700 text-white text-[11px] font-bold cursor-pointer"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5 text-orange-400" />
+                    <span>Buka di Tab Baru</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleInstantGoogleOwnerLogin}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-stone-950 font-black text-[11px] cursor-pointer shadow-sm"
+                  >
+                    <Crown className="w-3.5 h-3.5" />
+                    <span>Masuk Instan Owner Rayyan</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* TAB 1: FORM LOGIN & GOOGLE FIREBASE AUTH */}
+            {activeTab === 'form_login' && (
+              <div className="space-y-6">
+                {/* Google Firebase One-Click Auth */}
+                <div className="p-4 sm:p-5 rounded-2xl bg-stone-950 border border-stone-800 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black text-stone-300 flex items-center gap-2">
+                      <Flame className="w-4 h-4 text-orange-500" />
+                      Firebase Cloud Authentication
+                    </span>
+                    <span className="text-[10px] text-emerald-400 font-bold bg-emerald-950/60 border border-emerald-800/60 px-2 py-0.5 rounded-full">
+                      Google OAuth
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <button
+                      type="button"
+                      id="btn-login-view-google"
+                      onClick={handleGoogleLogin}
+                      disabled={isLoading}
+                      className="min-h-[44px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-stone-900 hover:bg-stone-850 active:scale-98 text-stone-200 border border-stone-700 text-xs font-black transition cursor-pointer disabled:opacity-50"
+                    >
+                      <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                        <path
+                          fill="#4285F4"
+                          d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"
+                        />
+                        <path
+                          fill="#34A853"
+                          d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.35 24 12 24z"
+                        />
+                        <path
+                          fill="#FBBC05"
+                          d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.16 0 9.98 0 12s.45 3.84 1.25 5.42l4.03-3.15z"
+                        />
+                        <path
+                          fill="#EA4335"
+                          d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.35 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
+                        />
+                      </svg>
+                      <span>Masuk Akun Google</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      id="btn-login-view-instant-owner"
+                      onClick={handleInstantGoogleOwnerLogin}
+                      disabled={isLoading}
+                      className="min-h-[44px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-amber-500/10 hover:bg-amber-500/20 active:scale-98 text-amber-300 border border-amber-500/40 text-xs font-black transition cursor-pointer"
+                    >
+                      <Crown className="w-4 h-4 text-amber-400 shrink-0" />
+                      <span>Masuk Owner Rayyan</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="relative flex items-center justify-center">
+                  <div className="border-t border-stone-800 w-full" />
+                  <span className="bg-stone-900 px-3 text-[11px] font-bold text-stone-500 uppercase tracking-wider absolute">
+                    Atau Masuk dengan PIN / No. HP
+                  </span>
+                </div>
+
+                {/* Form Input PIN */}
+                <form onSubmit={handleFormLogin} className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-stone-300 mb-1.5">
+                      Username, No. WhatsApp, atau Email
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        id="input-login-view-identifier"
+                        value={identifier}
+                        onChange={(e) => setIdentifier(e.target.value)}
+                        placeholder="Contoh: owner, kasir, 0812..., atau rayyan@..."
+                        className="w-full min-h-[48px] bg-stone-950 border-2 border-stone-800 focus:border-red-500 rounded-2xl px-4 pl-11 text-white text-sm outline-none transition"
+                        required
+                      />
+                      <User className="w-5 h-5 text-stone-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="text-xs font-bold text-stone-300">
+                        PIN Akses (4-6 Digit Angka)
+                      </label>
+                      <span className="text-[11px] text-orange-400 font-mono">
+                        Default: 1234 / 1111
+                      </span>
+                    </div>
+                    <div className="relative">
+                      <input
+                        type={showPin ? 'text' : 'password'}
+                        id="input-login-view-pin"
+                        maxLength={8}
+                        value={pin}
+                        onChange={(e) => setPin(e.target.value)}
+                        placeholder="Ketik PIN akun..."
+                        className="w-full min-h-[48px] bg-stone-950 border-2 border-stone-800 focus:border-red-500 rounded-2xl px-4 pl-11 pr-12 text-white text-sm outline-none transition tracking-widest font-mono"
+                        required
+                      />
+                      <Key className="w-5 h-5 text-stone-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      <button
+                        type="button"
+                        onClick={() => setShowPin(!showPin)}
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-stone-500 hover:text-stone-300 cursor-pointer"
+                      >
+                        {showPin ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    id="btn-login-view-submit"
+                    disabled={isLoading}
+                    className="w-full min-h-[50px] flex items-center justify-center gap-2 rounded-2xl bg-red-600 hover:bg-red-500 active:scale-98 text-white font-black text-sm shadow-xl shadow-red-950/60 transition cursor-pointer disabled:opacity-50"
+                  >
+                    <LogIn className="w-5 h-5" />
+                    <span>{isLoading ? 'Memverifikasi...' : 'Masuk Sekarang'}</span>
+                  </button>
+                </form>
+              </div>
+            )}
+
+            {/* TAB 2: QUICK DEMO 1-CLICK SWITCH */}
+            {activeTab === 'quick_demo' && (
+              <div className="space-y-4">
+                <div className="p-3 rounded-2xl bg-stone-950 border border-stone-800 text-xs text-stone-400">
+                  Pilih salah satu akun staf atau kasir di bawah ini untuk beralih peran secara langsung tanpa perlu memasukkan PIN berulang kali.
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {users.map((u) => {
+                    const cfg = getRoleBadgeInfo(u.role);
+                    const isCurrent = currentUser?.id === u.id;
+
+                    return (
+                      <button
+                        key={u.id}
+                        type="button"
+                        onClick={() => handleQuickLogin(u)}
+                        className={`p-3.5 rounded-2xl border-2 text-left flex items-center justify-between transition cursor-pointer active:scale-98 ${
+                          isCurrent
+                            ? 'bg-red-950/30 border-red-500 text-white shadow-md'
+                            : 'bg-stone-950 hover:bg-stone-850 border-stone-800 text-stone-200'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-10 h-10 rounded-xl overflow-hidden bg-stone-800 border border-stone-700 shrink-0">
+                            {u.avatar_url ? (
+                              <img src={u.avatar_url} alt={u.nama} className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center font-bold text-stone-300 text-xs">
+                                {u.nama.charAt(0)}
+                              </div>
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-extrabold text-white text-xs truncate">{u.nama}</p>
+                            <p className="text-[10px] text-stone-400 font-mono truncate">
+                              @{u.username} • PIN: {u.pin}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0 ml-2">
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-black border ${cfg.badgeBg} ${cfg.badgeText} ${cfg.badgeBorder}`}
+                          >
+                            {cfg.badge}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* TAB 3: REGISTER NEW CUSTOMER */}
+            {activeTab === 'register_customer' && (
+              <form onSubmit={handleRegisterCustomer} className="space-y-4">
+                <div className="p-3.5 rounded-2xl bg-sky-950/40 border border-sky-800/50 text-sky-200 text-xs space-y-1">
+                  <p className="font-black text-sky-300">Pendaftaran Akun Pelanggan</p>
+                  <p className="text-stone-300">
+                    Daftar untuk menikmati pemesanan mandiri Takeaway/Delivery dengan cepat via WhatsApp dan standee QR Code warung.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-stone-300 mb-1.5">
+                    Nama Lengkap
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={regName}
+                      onChange={(e) => setRegName(e.target.value)}
+                      placeholder="Contoh: Budi Prasetyo"
+                      className="w-full min-h-[48px] bg-stone-950 border-2 border-stone-800 focus:border-red-500 rounded-2xl px-4 pl-11 text-white text-sm outline-none transition"
+                      required
+                    />
+                    <User className="w-5 h-5 text-stone-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-stone-300 mb-1.5">
+                    Nomor WhatsApp / HP Aktif
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="tel"
+                      value={regPhone}
+                      onChange={(e) => setRegPhone(e.target.value)}
+                      placeholder="Contoh: 081234567890"
+                      className="w-full min-h-[48px] bg-stone-950 border-2 border-stone-800 focus:border-red-500 rounded-2xl px-4 pl-11 text-white text-sm outline-none transition"
+                      required
+                    />
+                    <Phone className="w-5 h-5 text-stone-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-stone-300 mb-1.5">
+                    Buat PIN Keamanan (4-6 Digit)
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="password"
+                      maxLength={6}
+                      value={regPin}
+                      onChange={(e) => setRegPin(e.target.value)}
+                      placeholder="Ketik 4-6 digit angka..."
+                      className="w-full min-h-[48px] bg-stone-950 border-2 border-stone-800 focus:border-red-500 rounded-2xl px-4 pl-11 text-white text-sm outline-none transition tracking-widest font-mono"
+                      required
+                    />
+                    <Key className="w-5 h-5 text-stone-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="w-full min-h-[50px] flex items-center justify-center gap-2 rounded-2xl bg-red-600 hover:bg-red-500 active:scale-98 text-white font-black text-sm shadow-xl shadow-red-950/60 transition cursor-pointer disabled:opacity-50"
+                >
+                  <UserPlus className="w-5 h-5" />
+                  <span>{isLoading ? 'Mendaftarkan...' : 'Daftar & Masuk Sekarang'}</span>
+                </button>
+              </form>
+            )}
+          </div>
+
+          {/* Right Section: RBAC Matrix & Role Descriptions */}
+          <div className="lg:col-span-4 space-y-4">
+            <div className="bg-stone-900 border-2 border-stone-800 rounded-3xl p-5 shadow-xl space-y-4">
+              <div className="flex items-center gap-2 pb-3 border-b border-stone-800">
+                <Shield className="w-5 h-5 text-orange-400" />
+                <h3 className="text-sm font-black text-white">Hierarki Hak Akses Warung</h3>
+              </div>
+
+              <div className="space-y-3">
+                {(['Owner', 'Admin', 'Kasir', 'Staff', 'Customer'] as NormalizedRole[]).map((r) => {
+                  const cfg = ROLE_CONFIGS[r];
+                  return (
+                    <div
+                      key={r}
+                      className="p-3 rounded-2xl bg-stone-950 border border-stone-800/80 space-y-1.5"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-black text-white text-xs">{cfg.title}</span>
+                        <span
+                          className={`text-[10px] font-black px-2 py-0.5 rounded-full border ${cfg.badgeBg} ${cfg.badgeText} ${cfg.badgeBorder}`}
+                        >
+                          {cfg.badge}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-stone-400 leading-relaxed">
+                        {cfg.description}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Quick Demo Credentials Info */}
+            <div className="p-4 rounded-3xl bg-amber-950/30 border border-amber-600/40 text-amber-200 text-xs space-y-2">
+              <div className="flex items-center gap-2 font-black text-amber-300">
+                <Sparkles className="w-4 h-4 text-amber-400" />
+                <span>Akun Default Siap Pakai</span>
+              </div>
+              <ul className="text-[11px] text-stone-300 space-y-1 font-mono">
+                <li>• <strong>owner</strong> / PIN: <strong>1234</strong> (Owner)</li>
+                <li>• <strong>admin</strong> / PIN: <strong>1234</strong> (Admin)</li>
+                <li>• <strong>kasir</strong> / PIN: <strong>1111</strong> (Kasir POS)</li>
+                <li>• <strong>staff</strong> / PIN: <strong>3333</strong> (Dapur/Stok)</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};

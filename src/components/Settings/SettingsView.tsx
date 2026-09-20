@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   Settings,
   Store,
@@ -18,6 +18,9 @@ import {
   Sparkles,
   Flame,
   Database,
+  Download,
+  Upload,
+  FileDown,
 } from 'lucide-react';
 import { StoreSettings, Product } from '../../types';
 import { GoogleSheetsSyncService } from '../../services/googleSheetsSync';
@@ -28,6 +31,13 @@ import {
   syncProductsToFirebase,
   firebaseConfig,
 } from '../../services/firebase';
+import {
+  exportProductsToExcel,
+  exportTransactionsToExcel,
+  exportCustomersToExcel,
+  downloadProductExcelTemplate,
+  parseProductsFromExcel,
+} from '../../utils/excelHelper';
 
 interface SettingsViewProps {
   settings: StoreSettings;
@@ -544,13 +554,89 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
         {/* Section 4: Cadangan & Reset Data */}
         <div className="bg-stone-900 border border-stone-800 rounded-3xl p-6 space-y-4 shadow-xl">
-          <h3 className="font-extrabold text-stone-100 text-base">Pemeliharaan & Reset Data</h3>
+          <div className="flex items-center gap-2">
+            <FileSpreadsheet className="w-5 h-5 text-emerald-400" />
+            <h3 className="font-extrabold text-stone-100 text-base">Cadangan Data & Format Excel (.xlsx)</h3>
+          </div>
           <p className="text-xs text-stone-400">
-            Aplikasi ini menyimpan data secara lokal dan aman di browser Anda (offline-first). Jika
-            Anda ingin mengembalikan menu & transaksi contoh ke versi awal, gunakan tombol di bawah.
+            Unduh seluruh data produk menu, transaksi kasir, dan data pelanggan langsung ke dalam format Microsoft Excel (.xlsx) yang kompatibel dengan Excel, Google Sheets, maupun LibreOffice.
           </p>
 
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+            <button
+              type="button"
+              onClick={() => {
+                const prods = StorageService.getProducts();
+                if (prods.length === 0) {
+                  showToast('Belum ada data produk untuk diekspor.', 'info');
+                  return;
+                }
+                exportProductsToExcel(prods);
+                showToast(`Berhasil mengekspor ${prods.length} produk ke Excel!`, 'success');
+              }}
+              className="flex items-center justify-center gap-2 p-3 rounded-2xl bg-emerald-950/40 hover:bg-emerald-900/50 text-emerald-300 border border-emerald-800/60 text-xs font-bold transition active:scale-95 cursor-pointer"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+              <span>Ekspor Menu (Excel)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                const txs = StorageService.getTransactions();
+                const exps = StorageService.getExpenses();
+                if (txs.length === 0 && exps.length === 0) {
+                  showToast('Belum ada data transaksi/pengeluaran untuk diekspor.', 'info');
+                  return;
+                }
+                exportTransactionsToExcel(txs, exps);
+                showToast(`Berhasil mengekspor ${txs.length} transaksi ke Excel!`, 'success');
+              }}
+              className="flex items-center justify-center gap-2 p-3 rounded-2xl bg-emerald-950/40 hover:bg-emerald-900/50 text-emerald-300 border border-emerald-800/60 text-xs font-bold transition active:scale-95 cursor-pointer"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+              <span>Ekspor Penjualan (Excel)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                const custs = StorageService.getCustomers();
+                if (custs.length === 0) {
+                  showToast('Belum ada data pelanggan untuk diekspor.', 'info');
+                  return;
+                }
+                exportCustomersToExcel(custs);
+                showToast(`Berhasil mengekspor ${custs.length} pelanggan ke Excel!`, 'success');
+              }}
+              className="flex items-center justify-center gap-2 p-3 rounded-2xl bg-emerald-950/40 hover:bg-emerald-900/50 text-emerald-300 border border-emerald-800/60 text-xs font-bold transition active:scale-95 cursor-pointer"
+            >
+              <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+              <span>Ekspor Pelanggan (Excel)</span>
+            </button>
+          </div>
+
           <div className="pt-2">
+            <button
+              type="button"
+              onClick={() => {
+                downloadProductExcelTemplate();
+                showToast('Template Excel untuk impor menu berhasil diunduh.', 'success');
+              }}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-stone-950 border border-stone-700 hover:border-amber-500/60 text-stone-300 hover:text-amber-400 text-xs font-bold transition cursor-pointer"
+            >
+              <FileDown className="w-4 h-4 text-amber-500" />
+              <span>Download Template Excel Impor Menu</span>
+            </button>
+          </div>
+
+          <hr className="border-stone-800 my-2" />
+
+          <div>
+            <h4 className="font-bold text-stone-200 text-xs mb-1">Pemeliharaan & Reset Data</h4>
+            <p className="text-[11px] text-stone-400 mb-3">
+              Jika Anda ingin mengembalikan data menu & transaksi contoh ke versi awal Warung Bang Kobra:
+            </p>
             <button
               type="button"
               onClick={() => {
@@ -563,7 +649,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   showToast('Data berhasil dikembalikan ke data awal.', 'info');
                 }
               }}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 border border-rose-800 text-xs font-bold transition active:scale-95"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 border border-rose-800 text-xs font-bold transition active:scale-95 cursor-pointer"
             >
               <RotateCcw className="w-4 h-4" />
               <span>Reset ke Data Demo Awal</span>

@@ -49,6 +49,7 @@ export const ROLE_CONFIGS: Record<NormalizedRole, RoleConfig> = {
       'reports',
       'users',
       'qrcode_order',
+      'public_menu',
       'settings',
       'ai_bot',
     ],
@@ -75,6 +76,7 @@ export const ROLE_CONFIGS: Record<NormalizedRole, RoleConfig> = {
       'reports',
       'users',
       'qrcode_order',
+      'public_menu',
       'settings',
       'ai_bot',
     ],
@@ -94,6 +96,7 @@ export const ROLE_CONFIGS: Record<NormalizedRole, RoleConfig> = {
       'whatsapp_order',
       'customers',
       'qrcode_order',
+      'public_menu',
       'dashboard',
       'ai_bot',
     ],
@@ -110,6 +113,7 @@ export const ROLE_CONFIGS: Record<NormalizedRole, RoleConfig> = {
     allowedTabs: [
       'orders',
       'stock',
+      'public_menu',
       'ai_bot',
     ],
     defaultTab: 'orders',
@@ -124,12 +128,15 @@ export const ROLE_CONFIGS: Record<NormalizedRole, RoleConfig> = {
     badgeBorder: 'border-sky-500/40',
     allowedTabs: [
       'qrcode_order',
+      'public_menu',
     ],
-    defaultTab: 'qrcode_order',
+    defaultTab: 'public_menu',
   },
 };
 
 export function hasTabAccess(role: UserRole | string | undefined | null, tab: ActiveTab): boolean {
+  // Login and public menu tabs are accessible by everyone (public entry/switch portal)
+  if (tab === 'login' || tab === 'public_menu') return true;
   const normRole = normalizeRole(role);
   const config = ROLE_CONFIGS[normRole];
   if (!config) return false;
@@ -138,6 +145,7 @@ export function hasTabAccess(role: UserRole | string | undefined | null, tab: Ac
 
 export function getAllowedRolesForTab(tab: ActiveTab): NormalizedRole[] {
   const roles: NormalizedRole[] = ['Owner', 'Admin', 'Kasir', 'Staff', 'Customer'];
+  if (tab === 'login' || tab === 'public_menu') return roles;
   return roles.filter((r) => ROLE_CONFIGS[r].allowedTabs.includes(tab));
 }
 
@@ -165,6 +173,8 @@ export function getTabLabel(tab: ActiveTab): string {
     reports: 'Laporan Penjualan & Laba',
     users: 'Manajemen Pengguna',
     qrcode_order: 'QR Code Self-Order',
+    public_menu: 'Menu Digital Publik',
+    login: 'Menu Login & Akses',
     settings: 'Pengaturan Warung',
     ai_bot: 'Asisten AI KobraBot',
   };

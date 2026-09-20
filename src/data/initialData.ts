@@ -360,6 +360,11 @@ export const INITIAL_SETTINGS: StoreSettings = {
   role: 'ADMIN',
   theme: 'dark',
   invoicePrefix: 'WKB',
+  onlineMenuEnabled: true,
+  onlineMenuBannerText: '🔥 Selamat Datang di Menu Online Warung Bang Kobra! Pesan Cepat via WhatsApp.',
+  onlineMenuHours: '09:00 - 22:00 WIB',
+  onlineMenuBankInfo: 'BCA 8830192831 a.n Warung Bang Kobra',
+  onlineMenuIsOpen: true,
 };
 
 export const INITIAL_CUSTOMERS: Customer[] = [

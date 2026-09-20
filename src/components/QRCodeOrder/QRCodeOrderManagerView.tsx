@@ -45,6 +45,9 @@ export const QRCodeOrderManagerView: React.FC<QRCodeOrderManagerViewProps> = ({
   const getOrderUrl = (type: QRTargetType) => {
     const origin = window.location.origin;
     const pathname = window.location.pathname;
+    if (type === 'menu') {
+      return `${origin}${pathname}?menu=public`;
+    }
     return `${origin}${pathname}?order=${type}`;
   };
 

@@ -546,6 +546,22 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                   );
                 })}
               </div>
+
+              {onOpenLogin && (
+                <div className="pt-2 border-t border-stone-800">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      onOpenLogin();
+                    }}
+                    className="w-full min-h-[44px] p-2.5 rounded-2xl bg-stone-950 hover:bg-stone-850 border border-stone-800 text-orange-400 hover:text-orange-300 flex items-center justify-center gap-2 text-xs font-bold transition cursor-pointer"
+                  >
+                    <Key className="w-4 h-4 text-orange-400" />
+                    <span>Buka Menu Login & Akses Terpisah</span>
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>

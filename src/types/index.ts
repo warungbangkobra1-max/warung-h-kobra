@@ -63,7 +63,7 @@ export interface Transaction {
   status: 'Selesai' | 'Dibatalkan' | 'Pending' | 'Diproses';
   items: TransactionDetail[];
   created_at: string;
-  tipe_pesanan?: 'Takeaway' | 'Delivery';
+  tipe_pesanan?: 'Takeaway' | 'Delivery' | 'Dine In';
   alamat_pengantaran?: string;
   catatan_pesanan?: string;
 }
@@ -137,6 +137,13 @@ export interface StoreSettings {
   role: UserRole;
   theme: 'dark' | 'light';
   invoicePrefix: string;
+  onlineMenuEnabled?: boolean;
+  onlineMenuBannerText?: string;
+  onlineMenuHours?: string;
+  onlineMenuBankInfo?: string;
+  onlineMenuIsOpen?: boolean;
+  onlineMenuAnnouncement?: string;
+  onlineMenuMinOrder?: number;
 }
 
 export interface SyncState {
@@ -160,6 +167,8 @@ export type ActiveTab =
   | 'reports'
   | 'users'
   | 'qrcode_order'
+  | 'public_menu'
+  | 'login'
   | 'settings'
   | 'ai_bot';
 
