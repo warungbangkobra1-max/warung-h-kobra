@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Settings,
   Store,
@@ -59,6 +59,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   showToast,
 }) => {
   const [formData, setFormData] = useState<StoreSettings>({ ...settings });
+
+  useEffect(() => {
+    setFormData({ ...settings });
+  }, [settings]);
   const [isTestingUrl, setIsTestingUrl] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [showGuideModal, setShowGuideModal] = useState(false);

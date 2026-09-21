@@ -319,6 +319,21 @@ export default function App() {
     };
   }, []);
 
+  // Cross-Tab / Window Synchronization (Local Device consistency)
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'wkb_pos_settings') {
+        const freshSettings = StorageService.getSettings();
+        setSettings(freshSettings);
+      } else if (e.key === 'wkb_pos_products') {
+        setProducts(StorageService.getProducts());
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
   // Theme Handling
   useEffect(() => {
     const root = document.documentElement;

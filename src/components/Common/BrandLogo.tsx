@@ -19,7 +19,7 @@ const SIZE_MAP: Record<string, string> = {
   md: 'w-10 h-10',
   lg: 'w-12 h-12',
   xl: 'w-16 h-16',
-  '2xl': 'w-20 h-20 sm:w-24 sm:h-24',
+  '2xl': 'w-20 h-20',
   custom: '',
 };
 
@@ -52,7 +52,7 @@ export const BrandLogo: React.FC<BrandLogoProps> = ({
       <img
         src={finalSrc}
         alt={alt}
-        className={`w-full h-full object-cover select-none transition-transform duration-200 ${
+        className={`w-full h-full object-contain p-0.5 select-none transition-transform duration-200 ${
           grayscale ? 'filter grayscale contrast-125' : ''
         } ${imgClassName}`}
         onError={() => {

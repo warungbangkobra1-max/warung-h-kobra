@@ -52,7 +52,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   showToast = (_msg: string, _type?: 'success' | 'error' | 'info') => {},
   isMandatory = false,
 }) => {
-  const [activeTab, setActiveTab] = useState<'quick_demo' | 'form_login' | 'register_customer'>('quick_demo');
+  const [activeTab, setActiveTab] = useState<'form_login' | 'register_customer'>('form_login');
 
   // Form State
   const [identifier, setIdentifier] = useState('');
@@ -149,32 +149,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     }
   };
 
-  const handleInstantGoogleOwnerLogin = () => {
-    setIsLoading(true);
-    const rayyanUser: WarungUser = {
-      id: 'USR-RAYYAN',
-      nama: 'Rayyan (Owner Warung)',
-      username: 'rayyan',
-      email: 'rayyanarasid549@gmail.com',
-      role: 'Owner',
-      pin: '1234',
-      no_hp: '0812-9988-7766',
-      avatar_url: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
-      status: 'Aktif',
-      total_transaksi: 210,
-      total_omset: 5800000,
-      terakhir_aktif: 'Sedang Aktif',
-      created_at: new Date().toISOString(),
-    };
-
-    StorageService.addUser(rayyanUser);
-    StorageService.setAuthUser(rayyanUser);
-    onLoginSuccess(rayyanUser);
-    setIsLoading(false);
-    showToast('Berhasil masuk sebagai Rayyan (Owner - rayyanarasid549@gmail.com)!', 'success');
-    onClose();
-  };
-
   const handleCopyDomain = () => {
     if (navigator.clipboard) {
       navigator.clipboard.writeText(window.location.hostname);
@@ -186,17 +160,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
   const handleOpenInNewTab = () => {
     window.open(window.location.href, '_blank');
-  };
-
-  const handleQuickLogin = (user: WarungUser) => {
-    setIsLoading(true);
-    setTimeout(() => {
-      StorageService.setAuthUser(user);
-      onLoginSuccess(user);
-      setIsLoading(false);
-      showToast(`Berhasil masuk sebagai ${user.nama} (${user.role})!`, 'success');
-      onClose();
-    }, 200);
   };
 
   const handleFormLogin = (e: React.FormEvent) => {
@@ -328,22 +291,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({
           <button
             type="button"
             onClick={() => {
-              setActiveTab('quick_demo');
-              setErrorMsg('');
-            }}
-            className={`flex-1 min-h-[40px] px-3 rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer ${
-              activeTab === 'quick_demo'
-                ? 'bg-red-600 text-white shadow-md shadow-red-950/50'
-                : 'text-stone-400 hover:text-stone-200 hover:bg-stone-850'
-            }`}
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>Login Cepat (5 Role)</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
               setActiveTab('form_login');
               setErrorMsg('');
             }}
@@ -354,7 +301,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
             }`}
           >
             <LogIn className="w-3.5 h-3.5" />
-            <span>Masuk Akun</span>
+            <span>Masuk Akun / PIN</span>
           </button>
 
           <button
@@ -399,15 +346,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               </div>
 
               <div className="pt-1 flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={handleInstantGoogleOwnerLogin}
-                  className="px-3 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-black text-[11px] flex items-center gap-1.5 transition cursor-pointer shadow-sm"
-                >
-                  <Crown className="w-3.5 h-3.5" />
-                  <span>Masuk Cepat: Rayyan (Owner)</span>
-                </button>
-
                 <button
                   type="button"
                   onClick={handleOpenInNewTab}
@@ -472,106 +410,17 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               </svg>
               <span>{isLoading ? 'Menghubungkan...' : 'Masuk via Google (Firebase Auth)'}</span>
             </button>
-
-            {/* Quick 1-Click Google Owner Account Option */}
-            <button
-              type="button"
-              onClick={handleInstantGoogleOwnerLogin}
-              disabled={isLoading}
-              className="w-full py-2 px-3 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 font-bold text-xs flex items-center justify-center gap-2 transition border border-amber-500/30 cursor-pointer disabled:opacity-50"
-            >
-              <Crown className="w-3.5 h-3.5 text-amber-400" />
-              <span>Masuk Cepat Sebagai Rayyan (Owner - rayyanarasid549@gmail.com)</span>
-            </button>
           </div>
 
           <div className="relative flex items-center py-1">
             <div className="flex-grow border-t border-stone-800"></div>
             <span className="flex-shrink mx-3 text-[10px] uppercase font-bold text-stone-500 tracking-wider">
-              Atau Pilih Akun Warung
+              Atau Masuk dengan PIN
             </span>
             <div className="flex-grow border-t border-stone-800"></div>
           </div>
 
-          {/* TAB 1: QUICK DEMO ALL ROLES */}
-          {activeTab === 'quick_demo' && (
-            <div className="space-y-3">
-              <p className="text-xs text-stone-400">
-                Pilih peran di bawah ini untuk beralih atau masuk secara instan tanpa perlu mengetik PIN:
-              </p>
-
-              <div className="space-y-2">
-                {users.map((user) => {
-                  const roleConfig = getRoleBadgeInfo(user.role);
-                  const isCurrent = currentUser?.id === user.id;
-
-                  return (
-                    <button
-                      key={user.id}
-                      type="button"
-                      onClick={() => handleQuickLogin(user)}
-                      className={`w-full p-3.5 rounded-2xl border text-left transition-all flex items-center justify-between group cursor-pointer ${
-                        isCurrent
-                          ? 'bg-stone-850 border-orange-500/60 ring-1 ring-orange-500/40'
-                          : 'bg-stone-950 border-stone-800 hover:border-stone-700 hover:bg-stone-850'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-10 h-10 rounded-xl overflow-hidden bg-stone-800 border border-stone-700 shrink-0">
-                          {user.avatar_url ? (
-                            <img
-                              src={user.avatar_url}
-                              alt={user.nama}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center font-bold text-stone-300 text-xs">
-                              {user.nama.charAt(0)}
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <p className="font-black text-stone-100 text-xs sm:text-sm truncate">
-                              {user.nama}
-                            </p>
-                            {isCurrent && (
-                              <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
-                                Aktif
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-[11px] text-stone-400 truncate">
-                            {roleConfig.description}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2 shrink-0 ml-2">
-                        <span
-                          className={`px-2.5 py-1 rounded-full text-[11px] font-extrabold border ${roleConfig.badgeBg} ${roleConfig.badgeText} ${roleConfig.badgeBorder}`}
-                        >
-                          {roleConfig.badge}
-                        </span>
-                        <ArrowRight className="w-4 h-4 text-stone-600 group-hover:text-stone-300 transition-transform group-hover:translate-x-0.5" />
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="p-3 rounded-2xl bg-stone-950 border border-stone-850 text-[11px] text-stone-400 space-y-1">
-                <span className="font-bold text-stone-300">💡 Informasi Role:</span>
-                <p>
-                  Owner & Admin memiliki akses laporan dan pengaturan penuh. Kasir menangani POS penjualan.
-                  Staff difokuskan untuk dapur & persediaan stok. Customer mengakses pemesanan QR Code mandiri.
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* TAB 2: FORM LOGIN (Username/Phone + PIN) */}
+          {/* TAB 1: FORM LOGIN (Username/Phone + PIN) */}
           {activeTab === 'form_login' && (
             <form onSubmit={handleFormLogin} className="space-y-4">
               <div className="space-y-1.5">
@@ -598,7 +447,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                   <input
                     type={showPin ? 'text' : 'password'}
                     required
-                    placeholder="Masukkan PIN (e.g. 1234, 1111)"
+                    placeholder="Masukkan PIN Rahasia Anda"
                     value={pin}
                     onChange={(e) => setPin(e.target.value)}
                     className="w-full px-3.5 py-2.5 rounded-xl bg-stone-950 border border-stone-800 text-stone-100 text-xs focus:border-red-500 focus:outline-none placeholder:text-stone-600 pr-10 tracking-widest font-mono"
@@ -613,12 +462,11 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                 </div>
               </div>
 
-              <div className="p-3 rounded-2xl bg-stone-950 border border-stone-850 text-[11px] text-stone-400">
-                <p className="font-bold text-stone-300 mb-0.5">Akun Bawaan (Default):</p>
-                <p>• Rayyan (Owner): <strong className="text-amber-400">rayyan</strong> atau <strong className="text-amber-400">rayyanarasid549@gmail.com</strong> (PIN: 1234)</p>
-                <p>• Bang Kobra (Owner): <strong className="text-amber-400">owner</strong> (PIN: 1234)</p>
-                <p>• Kasir: <strong className="text-orange-400">kasir</strong> (PIN: 1111)</p>
-                <p>• Staff: <strong className="text-emerald-400">staff</strong> (PIN: 3333)</p>
+              <div className="p-3 rounded-2xl bg-stone-950 border border-stone-850 text-[11px] text-stone-400 flex items-start gap-2.5">
+                <ShieldCheck className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                <p>
+                  Akses Owner, Kasir, Admin, dan Staf dilindungi oleh verifikasi PIN resmi warung. Pelanggan umum dapat mendaftar melalui tab &quot;Daftar Pelanggan&quot;.
+                </p>
               </div>
 
               <button

@@ -54,7 +54,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
   onNavigate,
   showToast = (_msg: string, _type?: 'success' | 'error' | 'info') => {},
 }) => {
-  const [activeTab, setActiveTab] = useState<'quick_demo' | 'form_login' | 'register_customer'>('form_login');
+  const [activeTab, setActiveTab] = useState<'form_login' | 'register_customer'>('form_login');
 
   // Form State
   const [identifier, setIdentifier] = useState('');
@@ -147,35 +147,6 @@ export const LoginView: React.FC<LoginViewProps> = ({
     }
   };
 
-  const handleInstantGoogleOwnerLogin = () => {
-    setIsLoading(true);
-    const rayyanUser: WarungUser = {
-      id: 'USR-RAYYAN',
-      nama: 'Rayyan (Owner Warung)',
-      username: 'rayyan',
-      email: 'rayyanarasid549@gmail.com',
-      role: 'Owner',
-      pin: '1234',
-      no_hp: '0812-9988-7766',
-      avatar_url:
-        'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80',
-      status: 'Aktif',
-      total_transaksi: 210,
-      total_omset: 5800000,
-      terakhir_aktif: 'Sedang Aktif',
-      created_at: new Date().toISOString(),
-    };
-
-    StorageService.addUser(rayyanUser);
-    StorageService.setAuthUser(rayyanUser);
-    onLoginSuccess(rayyanUser);
-    setIsLoading(false);
-    showToast('Berhasil masuk sebagai Rayyan (Owner - rayyanarasid549@gmail.com)!', 'success');
-    if (onNavigate) {
-      onNavigate('dashboard');
-    }
-  };
-
   const handleCopyDomain = () => {
     if (navigator.clipboard) {
       navigator.clipboard.writeText(window.location.hostname);
@@ -187,19 +158,6 @@ export const LoginView: React.FC<LoginViewProps> = ({
 
   const handleOpenInNewTab = () => {
     window.open(window.location.href, '_blank');
-  };
-
-  const handleQuickLogin = (user: WarungUser) => {
-    setIsLoading(true);
-    setTimeout(() => {
-      StorageService.setAuthUser(user);
-      onLoginSuccess(user);
-      setIsLoading(false);
-      showToast(`Berhasil masuk sebagai ${user.nama} (${user.role})!`, 'success');
-      if (onNavigate) {
-        onNavigate(getDefaultTabForRole(user.role));
-      }
-    }, 200);
   };
 
   const handleFormLogin = (e: React.FormEvent) => {
@@ -413,24 +371,6 @@ export const LoginView: React.FC<LoginViewProps> = ({
 
               <button
                 type="button"
-                id="tab-quick-demo"
-                onClick={() => {
-                  setActiveTab('quick_demo');
-                  setErrorMsg('');
-                  setAuthTrouble(null);
-                }}
-                className={`flex-1 min-h-[44px] py-2.5 px-3 rounded-xl text-xs sm:text-sm font-black flex items-center justify-center gap-2 transition cursor-pointer ${
-                  activeTab === 'quick_demo'
-                    ? 'bg-red-600 text-white shadow-md shadow-red-950/50 scale-[1.01]'
-                    : 'text-stone-400 hover:text-stone-200 hover:bg-stone-900'
-                }`}
-              >
-                <Flame className="w-4 h-4 text-orange-400" />
-                <span>1-Click Switch</span>
-              </button>
-
-              <button
-                type="button"
                 id="tab-register-customer"
                 onClick={() => {
                   setActiveTab('register_customer');
@@ -487,15 +427,6 @@ export const LoginView: React.FC<LoginViewProps> = ({
                     <ExternalLink className="w-3.5 h-3.5 text-orange-400" />
                     <span>Buka di Tab Baru</span>
                   </button>
-
-                  <button
-                    type="button"
-                    onClick={handleInstantGoogleOwnerLogin}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-stone-950 font-black text-[11px] cursor-pointer shadow-sm"
-                  >
-                    <Crown className="w-3.5 h-3.5" />
-                    <span>Masuk Instan Owner Rayyan</span>
-                  </button>
                 </div>
               </div>
             )}
@@ -515,13 +446,13 @@ export const LoginView: React.FC<LoginViewProps> = ({
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div>
                     <button
                       type="button"
                       id="btn-login-view-google"
                       onClick={handleGoogleLogin}
                       disabled={isLoading}
-                      className="min-h-[44px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-stone-900 hover:bg-stone-850 active:scale-98 text-stone-200 border border-stone-700 text-xs font-black transition cursor-pointer disabled:opacity-50"
+                      className="w-full min-h-[44px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-stone-900 hover:bg-stone-850 active:scale-98 text-stone-200 border border-stone-700 text-xs font-black transition cursor-pointer disabled:opacity-50"
                     >
                       <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
                         <path
@@ -541,18 +472,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
                           d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.35 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
                         />
                       </svg>
-                      <span>Masuk Akun Google</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      id="btn-login-view-instant-owner"
-                      onClick={handleInstantGoogleOwnerLogin}
-                      disabled={isLoading}
-                      className="min-h-[44px] flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl bg-amber-500/10 hover:bg-amber-500/20 active:scale-98 text-amber-300 border border-amber-500/40 text-xs font-black transition cursor-pointer"
-                    >
-                      <Crown className="w-4 h-4 text-amber-400 shrink-0" />
-                      <span>Masuk Owner Rayyan</span>
+                      <span>Masuk Akun Google (Firebase Auth)</span>
                     </button>
                   </div>
                 </div>
@@ -589,9 +509,6 @@ export const LoginView: React.FC<LoginViewProps> = ({
                       <label className="text-xs font-bold text-stone-300">
                         PIN Akses (4-6 Digit Angka)
                       </label>
-                      <span className="text-[11px] text-orange-400 font-mono">
-                        Default: 1234 / 1111
-                      </span>
                     </div>
                     <div className="relative">
                       <input
@@ -628,62 +545,7 @@ export const LoginView: React.FC<LoginViewProps> = ({
               </div>
             )}
 
-            {/* TAB 2: QUICK DEMO 1-CLICK SWITCH */}
-            {activeTab === 'quick_demo' && (
-              <div className="space-y-4">
-                <div className="p-3 rounded-2xl bg-stone-950 border border-stone-800 text-xs text-stone-400">
-                  Pilih salah satu akun staf atau kasir di bawah ini untuk beralih peran secara langsung tanpa perlu memasukkan PIN berulang kali.
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {users.map((u) => {
-                    const cfg = getRoleBadgeInfo(u.role);
-                    const isCurrent = currentUser?.id === u.id;
-
-                    return (
-                      <button
-                        key={u.id}
-                        type="button"
-                        onClick={() => handleQuickLogin(u)}
-                        className={`p-3.5 rounded-2xl border-2 text-left flex items-center justify-between transition cursor-pointer active:scale-98 ${
-                          isCurrent
-                            ? 'bg-red-950/30 border-red-500 text-white shadow-md'
-                            : 'bg-stone-950 hover:bg-stone-850 border-stone-800 text-stone-200'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-10 h-10 rounded-xl overflow-hidden bg-stone-800 border border-stone-700 shrink-0">
-                            {u.avatar_url ? (
-                              <img src={u.avatar_url} alt={u.nama} className="w-full h-full object-cover" />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center font-bold text-stone-300 text-xs">
-                                {u.nama.charAt(0)}
-                              </div>
-                            )}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="font-extrabold text-white text-xs truncate">{u.nama}</p>
-                            <p className="text-[10px] text-stone-400 font-mono truncate">
-                              @{u.username} • PIN: {u.pin}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2 shrink-0 ml-2">
-                          <span
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-black border ${cfg.badgeBg} ${cfg.badgeText} ${cfg.badgeBorder}`}
-                          >
-                            {cfg.badge}
-                          </span>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* TAB 3: REGISTER NEW CUSTOMER */}
+            {/* TAB 2: REGISTER NEW CUSTOMER */}
             {activeTab === 'register_customer' && (
               <form onSubmit={handleRegisterCustomer} className="space-y-4">
                 <div className="p-3.5 rounded-2xl bg-sky-950/40 border border-sky-800/50 text-sky-200 text-xs space-y-1">
@@ -790,18 +652,15 @@ export const LoginView: React.FC<LoginViewProps> = ({
               </div>
             </div>
 
-            {/* Quick Demo Credentials Info */}
-            <div className="p-4 rounded-3xl bg-amber-950/30 border border-amber-600/40 text-amber-200 text-xs space-y-2">
+            {/* Warung Access Security Info */}
+            <div className="p-4 rounded-3xl bg-stone-950 border border-stone-800 text-stone-300 text-xs space-y-2">
               <div className="flex items-center gap-2 font-black text-amber-300">
-                <Sparkles className="w-4 h-4 text-amber-400" />
-                <span>Akun Default Siap Pakai</span>
+                <ShieldCheck className="w-4 h-4 text-amber-400" />
+                <span>Keamanan Akses POS & Warung</span>
               </div>
-              <ul className="text-[11px] text-stone-300 space-y-1 font-mono">
-                <li>• <strong>owner</strong> / PIN: <strong>1234</strong> (Owner)</li>
-                <li>• <strong>admin</strong> / PIN: <strong>1234</strong> (Admin)</li>
-                <li>• <strong>kasir</strong> / PIN: <strong>1111</strong> (Kasir POS)</li>
-                <li>• <strong>staff</strong> / PIN: <strong>3333</strong> (Dapur/Stok)</li>
-              </ul>
+              <p className="text-[11px] text-stone-400 leading-relaxed">
+                PIN akses hanya diberikan kepada staf dan kasir yang bertugas resmi. Hubungi Owner warung jika Anda lupa PIN atau membutuhkan pembuatan akun staf baru.
+              </p>
             </div>
           </div>
         </div>

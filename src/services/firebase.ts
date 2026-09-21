@@ -837,6 +837,9 @@ export function subscribeToFirebaseSettings(
             remote.logoUrl = '/icon.svg';
           }
           onSettingsReceived(remote);
+        } else {
+          // Dokumen settings belum ada di Firestore, trigger sinkronisasi awal
+          onSettingsReceived({});
         }
       },
       (error) => {

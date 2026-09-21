@@ -357,7 +357,7 @@ export const INITIAL_SETTINGS: StoreSettings = {
   stockControl: true,
   qrisImageUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=00020101021126570011ID.WARUNGBANGKOBRA.ID5204581253033605802ID5917WARUNG+BANG+KOBRA6007JAKARTA6304ABCD',
   activeCashier: 'Budi Kasir',
-  role: 'ADMIN',
+  role: 'Customer',
   theme: 'dark',
   invoicePrefix: 'WKB',
   onlineMenuEnabled: true,

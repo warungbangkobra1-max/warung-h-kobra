@@ -140,16 +140,7 @@ export class StorageService {
   }
 
   static getAuthUser(): WarungUser | null {
-    const authUser = safeGetItem<WarungUser | null>(STORAGE_KEYS.AUTH_USER, null);
-    if (authUser) return authUser;
-    // Default logged in user is the Owner for initial experience, or can be null
-    const users = this.getUsers();
-    const defaultUser = users.find((u) => u.email === 'rayyanarasid549@gmail.com') || users.find((u) => u.role === 'Owner') || users[0] || INITIAL_USERS[0];
-    if (defaultUser) {
-      this.setAuthUser(defaultUser);
-      return defaultUser;
-    }
-    return null;
+    return safeGetItem<WarungUser | null>(STORAGE_KEYS.AUTH_USER, null);
   }
 
   static setAuthUser(user: WarungUser | null): void {
