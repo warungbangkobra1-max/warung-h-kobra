@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { StoreSettings } from '../../types';
 import { generateQRCodeDataURL } from '../../utils/qrcode';
+import { BrandLogo } from '../Common/BrandLogo';
 
 interface QRCodeOrderManagerViewProps {
   settings: StoreSettings;
@@ -408,17 +409,13 @@ export const QRCodeOrderManagerView: React.FC<QRCodeOrderManagerViewProps> = ({
             >
               {/* Header inside Standee */}
               <div className="flex flex-col items-center space-y-2">
-                <div className="w-16 h-16 rounded-2xl overflow-hidden bg-gradient-to-tr from-amber-600 to-orange-600 flex items-center justify-center shadow-lg border-2 border-amber-500/40">
-                  {settings.logoUrl ? (
-                    <img
-                      src={settings.logoUrl}
-                      alt={settings.storeName}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <Flame className="w-10 h-10 text-white fill-white" />
-                  )}
-                </div>
+                <BrandLogo
+                  src={settings.logoUrl}
+                  alt={settings.storeName}
+                  size="xl"
+                  rounded="rounded-2xl"
+                  className="shadow-lg border-2 border-amber-500/40"
+                />
 
                 <div>
                   <h2 className="text-xl sm:text-2xl font-black tracking-tight text-stone-950 uppercase">
@@ -457,16 +454,15 @@ export const QRCodeOrderManagerView: React.FC<QRCodeOrderManagerViewProps> = ({
                     />
                     {/* Embedded Central Mini Logo */}
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                      <div className="w-12 h-12 rounded-xl bg-white p-1 shadow-md border-2 border-amber-600 flex items-center justify-center overflow-hidden">
-                        {settings.logoUrl ? (
-                          <img
-                            src={settings.logoUrl}
-                            alt="Logo"
-                            className="w-full h-full object-cover rounded-lg"
-                          />
-                        ) : (
-                          <Flame className="w-6 h-6 text-amber-600 fill-amber-600" />
-                        )}
+                      <div className="w-12 h-12 rounded-xl bg-white p-0.5 shadow-md border-2 border-amber-600 flex items-center justify-center overflow-hidden">
+                        <BrandLogo
+                          src={settings.logoUrl}
+                          alt="Logo"
+                          size="sm"
+                          rounded="rounded-lg"
+                          border={false}
+                          className="w-full h-full"
+                        />
                       </div>
                     </div>
                   </div>

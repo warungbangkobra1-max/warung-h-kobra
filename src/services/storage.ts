@@ -406,10 +406,17 @@ export class StorageService {
 
   // SETTINGS
   static getSettings(): StoreSettings {
-    return safeGetItem<StoreSettings>(STORAGE_KEYS.SETTINGS, INITIAL_SETTINGS);
+    const settings = safeGetItem<StoreSettings>(STORAGE_KEYS.SETTINGS, INITIAL_SETTINGS);
+    if (!settings.logoUrl || settings.logoUrl.trim() === '') {
+      settings.logoUrl = '/icon.svg';
+    }
+    return settings;
   }
 
   static saveSettings(settings: StoreSettings): void {
+    if (!settings.logoUrl || settings.logoUrl.trim() === '') {
+      settings.logoUrl = '/icon.svg';
+    }
     safeSetItem(STORAGE_KEYS.SETTINGS, settings);
   }
 

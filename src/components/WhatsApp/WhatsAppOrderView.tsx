@@ -15,6 +15,7 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { Product, StoreSettings } from '../../types';
+import { BrandLogo } from '../Common/BrandLogo';
 import {
   formatRupiah,
   buildCustomerWhatsAppOrderMessage,
@@ -145,17 +146,13 @@ export const WhatsAppOrderView: React.FC<WhatsAppOrderViewProps> = ({
               </span>
             </p>
           </div>
-          <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center justify-center shrink-0 overflow-hidden">
-            {settings.logoUrl ? (
-              <img
-                src={settings.logoUrl}
-                alt={settings.storeName}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <MessageCircle className="w-7 h-7" />
-            )}
-          </div>
+          <BrandLogo
+            src={settings.logoUrl}
+            alt={settings.storeName}
+            size="lg"
+            rounded="rounded-2xl"
+            className="w-12 h-12 shrink-0 border border-emerald-500/30"
+          />
         </div>
 
         {!settings.whatsappNumber && (

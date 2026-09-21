@@ -28,6 +28,7 @@ import {
 import { WarungUser, UserRole, StoreSettings, ActiveTab } from '../../types';
 import { StorageService } from '../../services/storage';
 import { signInWithGoogle } from '../../services/firebase';
+import { BrandLogo } from '../Common/BrandLogo';
 import {
   normalizeRole,
   getRoleBadgeInfo,
@@ -305,13 +306,20 @@ export const LoginView: React.FC<LoginViewProps> = ({
     <div className="flex-1 overflow-y-auto bg-stone-950 p-4 sm:p-6 lg:p-8 min-h-screen flex flex-col justify-center items-center">
       <div className="w-full max-w-4xl space-y-6">
         {/* Top Header Card */}
-        <div className="text-center space-y-2">
+        <div className="text-center space-y-3 flex flex-col items-center">
+          <BrandLogo
+            src={settings?.logoUrl}
+            alt={settings?.storeName || 'Warung Bang Kobra'}
+            size="xl"
+            rounded="rounded-2xl"
+            className="shadow-xl shadow-red-950/60 border-2 border-red-500/30"
+          />
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-red-950/60 border border-red-800/60 text-red-400 text-xs font-black uppercase tracking-wider shadow-inner">
             <ShieldCheck className="w-4 h-4 text-orange-400" />
             <span>Portal Akses & Keamanan Warung</span>
           </div>
           <h1 className="text-2xl sm:text-4xl font-black text-white tracking-tight">
-            Menu Login & Hak Akses
+            {settings?.storeName || 'Warung Bang Kobra'}
           </h1>
           <p className="text-xs sm:text-sm text-stone-400 max-w-xl mx-auto">
             Masuk ke sistem POS Warung Bang Kobra dengan peran Anda untuk mengakses Kasir, Manajemen Stok, Laporan Keuangan, dan Pengaturan.

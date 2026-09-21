@@ -28,6 +28,7 @@ import {
 import { ActiveTab, UserRole, WarungUser } from '../types';
 import { hasTabAccess, normalizeRole, getRoleBadgeInfo } from '../utils/rbac';
 import { PWAInstallButton } from './PWAInstallButton';
+import { BrandLogo } from './Common/BrandLogo';
 
 interface NavigationProps {
   activeTab: ActiveTab;
@@ -245,13 +246,13 @@ export const Navigation: React.FC<NavigationProps> = ({
 
           <div className="p-3 rounded-2xl bg-stone-900 border border-stone-800 space-y-2.5">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl overflow-hidden bg-red-600 flex items-center justify-center shrink-0 border border-red-500/40">
-                {logoUrl ? (
-                  <img src={logoUrl} alt="Logo Warung" className="w-full h-full object-cover" />
-                ) : (
-                  <Flame className="w-4 h-4 text-white" />
-                )}
-              </div>
+              <BrandLogo
+                src={logoUrl}
+                alt={storeName || 'Logo Warung'}
+                size="sm"
+                rounded="rounded-xl"
+                className="shrink-0"
+              />
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-black text-white truncate">
                   {storeName || 'Warung Modern'}
@@ -358,13 +359,19 @@ export const Navigation: React.FC<NavigationProps> = ({
             {/* Drawer Header */}
             <div className="flex items-center justify-between pb-3 border-b border-stone-800">
               <div className="flex items-center gap-2.5">
-                <span className="p-2 rounded-xl bg-red-600 text-white font-black shadow-md shadow-red-900/40">
-                  <Menu className="w-5 h-5" />
-                </span>
+                <BrandLogo
+                  src={logoUrl}
+                  alt={storeName || 'Warung Bang Kobra'}
+                  size="md"
+                  rounded="rounded-2xl"
+                  className="shadow-md shadow-red-900/40 shrink-0"
+                />
                 <div>
-                  <h3 className="font-black text-white text-base">Menu Lainnya</h3>
-                  <p className="text-[11px] text-stone-400 font-medium">
-                    Modern Warung POS Bang Kobra
+                  <h3 className="font-black text-white text-base leading-tight">
+                    {storeName || 'Warung Bang Kobra'}
+                  </h3>
+                  <p className="text-[11px] text-orange-400 font-bold">
+                    POS &amp; Order Management
                   </p>
                 </div>
               </div>

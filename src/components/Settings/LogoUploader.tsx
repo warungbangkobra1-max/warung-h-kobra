@@ -16,6 +16,7 @@ import {
   Sliders,
 } from 'lucide-react';
 import { StoreSettings } from '../../types';
+import { BrandLogo } from '../Common/BrandLogo';
 
 interface LogoUploaderProps {
   currentLogoUrl: string;
@@ -26,6 +27,13 @@ interface LogoUploaderProps {
 
 // Preset vector culinary logo SVG data URIs
 export const PRESET_LOGOS = [
+  {
+    id: 'bang-kobra-official',
+    name: 'Logo Resmi Bang Kobra (Default)',
+    url: '/icon.svg',
+    icon: Flame,
+    color: 'from-red-600 to-amber-500',
+  },
   {
     id: 'kobra-fire',
     name: 'Kobra Api Merah',
@@ -395,20 +403,13 @@ export const LogoUploader: React.FC<LogoUploaderProps> = ({
               1. Di Header / Bilah Atas
             </span>
             <div className="bg-stone-900 border border-stone-800 rounded-xl p-2.5 flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl overflow-hidden bg-gradient-to-br from-amber-600 to-orange-600 flex items-center justify-center shrink-0 border border-amber-500/40 shadow-sm">
-                {logoPreview ? (
-                  <img
-                    src={logoPreview}
-                    alt={storeName}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      (e.target as HTMLElement).style.display = 'none';
-                    }}
-                  />
-                ) : (
-                  <Flame className="w-5 h-5 text-white" />
-                )}
-              </div>
+              <BrandLogo
+                src={logoPreview}
+                alt={storeName}
+                size="sm"
+                rounded="rounded-xl"
+                className="shrink-0"
+              />
               <div className="min-w-0">
                 <p className="font-black text-xs text-white truncate leading-tight">
                   {storeName || 'WARUNG BANG KOBRA'}
@@ -424,16 +425,15 @@ export const LogoUploader: React.FC<LogoUploaderProps> = ({
               2. Di Struk Cetak Kasir
             </span>
             <div className="bg-stone-900 border border-stone-800 rounded-xl p-3 text-center font-mono">
-              <div className="w-10 h-10 mx-auto rounded-lg overflow-hidden bg-stone-800 border border-stone-700 flex items-center justify-center mb-1.5">
-                {logoPreview ? (
-                  <img
-                    src={logoPreview}
-                    alt={storeName}
-                    className="w-full h-full object-contain filter grayscale"
-                  />
-                ) : (
-                  <Flame className="w-5 h-5 text-stone-400" />
-                )}
+              <div className="w-10 h-10 mx-auto flex items-center justify-center mb-1.5">
+                <BrandLogo
+                  src={logoPreview}
+                  alt={storeName}
+                  size="md"
+                  rounded="rounded-lg"
+                  grayscale={true}
+                  className="w-10 h-10"
+                />
               </div>
               <p className="text-[11px] font-bold text-amber-400 truncate">
                 {storeName.toUpperCase()}

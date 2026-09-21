@@ -797,13 +797,19 @@ export async function saveSettingsToFirebase(settings: StoreSettings): Promise<b
       id: 'warung',
       storeName: String(settings.storeName || 'Warung Bang Kobra'),
       tagline: String(settings.tagline || ''),
+      storeSlogan: String(settings.storeSlogan || settings.tagline || ''),
       address: String(settings.address || ''),
       whatsappNumber: String(settings.whatsappNumber || ''),
-      logoUrl: String(settings.logoUrl || ''),
+      logoUrl: String(settings.logoUrl || '/icon.svg'),
       receiptFooter: String(settings.receiptFooter || ''),
       taxPercent: Number(settings.taxPercent ?? 0),
       currency: String(settings.currency || 'Rp'),
       qrisImageUrl: String(settings.qrisImageUrl || ''),
+      onlineMenuEnabled: Boolean(settings.onlineMenuEnabled ?? true),
+      onlineMenuBannerText: String(settings.onlineMenuBannerText || ''),
+      onlineMenuHours: String(settings.onlineMenuHours || ''),
+      onlineMenuBankInfo: String(settings.onlineMenuBankInfo || ''),
+      onlineMenuIsOpen: Boolean(settings.onlineMenuIsOpen ?? true),
       updated_at: new Date().toISOString(),
     };
     await setDoc(docRef, payload, { merge: true });
@@ -826,7 +832,11 @@ export function subscribeToFirebaseSettings(
       docRef,
       (docSnap) => {
         if (docSnap.exists()) {
-          onSettingsReceived(docSnap.data() as Partial<StoreSettings>);
+          const remote = docSnap.data() as Partial<StoreSettings>;
+          if (!remote.logoUrl || remote.logoUrl.trim() === '') {
+            remote.logoUrl = '/icon.svg';
+          }
+          onSettingsReceived(remote);
         }
       },
       (error) => {

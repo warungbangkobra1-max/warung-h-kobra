@@ -347,7 +347,7 @@ export const INITIAL_SETTINGS: StoreSettings = {
   tagline: 'POS & ORDER MANAGEMENT',
   address: 'Jl. Raya Kuliner No. 88, Samping Kampus / Pasar Malam',
   whatsappNumber: '6281234567890', // User can update this anytime in Settings
-  logoUrl: '',
+  logoUrl: '/icon.svg',
   receiptFooter: 'Matur Suwun / Terima kasih sudah membeli di WARUNG BANG KOBRA 🙏',
   currency: 'Rp',
   taxPercent: 0,

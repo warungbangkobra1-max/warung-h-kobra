@@ -37,6 +37,7 @@ import {
 import { StorageService } from '../../services/storage';
 import { saveOrderToFirebase, db } from '../../services/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
+import { BrandLogo } from '../Common/BrandLogo';
 
 interface CustomerOrderViewProps {
   products: Product[];
@@ -351,17 +352,13 @@ export const CustomerOrderView: React.FC<CustomerOrderViewProps> = ({
       <header className="sticky top-0 z-30 bg-stone-900/95 backdrop-blur-md border-b border-stone-800 shadow-md">
         <div className="max-w-2xl mx-auto px-4 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-10 h-10 rounded-xl overflow-hidden bg-gradient-to-tr from-amber-600 to-orange-600 flex items-center justify-center shrink-0 border border-amber-500/30 shadow-md shadow-amber-950/40">
-              {settings.logoUrl ? (
-                <img
-                  src={settings.logoUrl}
-                  alt={settings.storeName}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <Flame className="w-6 h-6 text-stone-950 fill-stone-950" />
-              )}
-            </div>
+            <BrandLogo
+              src={settings.logoUrl}
+              alt={settings.storeName}
+              size="md"
+              rounded="rounded-xl"
+              className="shadow-md shadow-amber-950/40 shrink-0"
+            />
             <div className="min-w-0">
               <div className="flex items-center gap-1.5">
                 <h1 className="font-extrabold text-sm sm:text-base text-stone-100 truncate">

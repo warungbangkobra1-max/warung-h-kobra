@@ -1,6 +1,7 @@
 import React from 'react';
 import { Printer, Share2, Download, CheckCircle2, X } from 'lucide-react';
 import { Transaction, StoreSettings } from '../../types';
+import { BrandLogo } from '../Common/BrandLogo';
 import {
   formatRupiah,
   buildCashierReceiptWhatsAppMessage,
@@ -62,18 +63,16 @@ export const ReceiptModal: React.FC<ReceiptModalProps> = ({
           >
             {/* Store Info */}
             <div className="text-center pb-3 border-b border-dashed border-stone-700">
-              {settings.logoUrl && (
-                <div className="mb-2 flex justify-center">
-                  <img
-                    src={settings.logoUrl}
-                    alt={settings.storeName}
-                    className="w-12 h-12 object-contain rounded-lg filter grayscale"
-                    onError={(e) => {
-                      (e.target as HTMLElement).style.display = 'none';
-                    }}
-                  />
-                </div>
-              )}
+              <div className="mb-2 flex justify-center">
+                <BrandLogo
+                  src={settings.logoUrl}
+                  alt={settings.storeName}
+                  size="md"
+                  rounded="rounded-lg"
+                  grayscale={true}
+                  className="w-12 h-12"
+                />
+              </div>
               <div className="font-extrabold text-sm tracking-wider text-amber-400">
                 {settings.storeName.toUpperCase()}
               </div>

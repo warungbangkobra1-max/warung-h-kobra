@@ -24,6 +24,7 @@ import {
 import { WarungUser, UserRole, StoreSettings } from '../../types';
 import { StorageService } from '../../services/storage';
 import { signInWithGoogle } from '../../services/firebase';
+import { BrandLogo } from '../Common/BrandLogo';
 import {
   normalizeRole,
   getRoleBadgeInfo,
@@ -290,9 +291,13 @@ export const LoginModal: React.FC<LoginModalProps> = ({
         {/* Header */}
         <div className="px-6 py-5 bg-stone-950 border-b border-stone-800 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-red-600 to-orange-600 flex items-center justify-center text-white shadow-md shadow-red-950/40">
-              <Flame className="w-5 h-5" />
-            </div>
+            <BrandLogo
+              src={settings.logoUrl}
+              alt={settings.storeName}
+              size="md"
+              rounded="rounded-2xl"
+              className="shadow-md shadow-red-950/40 shrink-0"
+            />
             <div>
               <h2 className="font-black text-white text-base sm:text-lg flex items-center gap-2">
                 <span>Login & Akses Peran</span>

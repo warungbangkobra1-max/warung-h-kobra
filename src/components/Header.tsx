@@ -22,6 +22,7 @@ import { StoreSettings, SyncState, UserRole, WarungUser } from '../types';
 import { normalizeRole, getRoleBadgeInfo, ROLE_CONFIGS, NormalizedRole } from '../utils/rbac';
 import { PWAInstallButton } from './PWAInstallButton';
 import { OfflineSyncBanner } from './OfflineSyncBanner';
+import { BrandLogo } from './Common/BrandLogo';
 
 interface HeaderProps {
   settings: StoreSettings;
@@ -80,25 +81,22 @@ export const Header: React.FC<HeaderProps> = ({
             id="brand-logo-container"
             onClick={onOpenLogoEditor}
             title={onOpenLogoEditor ? 'Klik untuk Edit / Upload Logo Warung' : settings.storeName}
-            className={`w-10 h-10 rounded-2xl bg-red-600 flex items-center justify-center text-white shadow-lg shadow-red-950/70 shrink-0 border border-red-500/50 overflow-hidden relative group ${
+            className={`w-10 h-10 rounded-2xl flex items-center justify-center shadow-lg shadow-red-950/70 shrink-0 border border-stone-800 overflow-hidden relative group ${
               onOpenLogoEditor ? 'cursor-pointer' : ''
             }`}
           >
-            {settings.logoUrl ? (
-              <img
-                src={settings.logoUrl}
-                alt={settings.storeName}
-                className="w-full h-full object-cover transition-transform group-hover:scale-110"
-                onError={(e) => {
-                  (e.target as HTMLElement).style.display = 'none';
-                }}
-              />
-            ) : (
-              <Flame className="w-5 h-5 text-white animate-pulse group-hover:scale-110 transition-transform" />
-            )}
+            <BrandLogo
+              src={settings.logoUrl}
+              alt={settings.storeName}
+              size="custom"
+              rounded="rounded-none"
+              border={false}
+              className="w-full h-full"
+              imgClassName="group-hover:scale-110"
+            />
 
             {onOpenLogoEditor && (
-              <div className="absolute inset-0 bg-stone-950/70 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+              <div className="absolute inset-0 bg-stone-950/70 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity z-10">
                 <Camera className="w-4 h-4 text-orange-400" />
               </div>
             )}

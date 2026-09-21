@@ -42,6 +42,7 @@ import {
 import { StorageService } from '../../services/storage';
 import { saveOrderToFirebase, db } from '../../services/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
+import { BrandLogo } from '../Common/BrandLogo';
 
 interface PublicMenuCustomerViewProps {
   products: Product[];
@@ -450,19 +451,14 @@ export const PublicMenuCustomerView: React.FC<PublicMenuCustomerViewProps> = ({
         <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-4">
             {/* Warung Avatar / Logo */}
-            <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-gradient-to-br from-orange-500 to-red-600 p-0.5 shadow-xl shadow-orange-950/40 shrink-0 relative">
-              <div className="w-full h-full bg-stone-950 rounded-[14px] flex items-center justify-center overflow-hidden">
-                {settings.logoUrl ? (
-                  <img
-                    src={settings.logoUrl}
-                    alt={settings.storeName}
-                    className="w-full h-full object-cover"
-                    referrerPolicy="no-referrer"
-                  />
-                ) : (
-                  <Utensils className="w-10 h-10 text-orange-500" />
-                )}
-              </div>
+            <div className="relative shrink-0">
+              <BrandLogo
+                src={settings.logoUrl}
+                alt={settings.storeName}
+                size="2xl"
+                rounded="rounded-2xl"
+                className="shadow-xl shadow-orange-950/40 border-2 border-orange-500/40"
+              />
               <span className="absolute -bottom-1 -right-1 flex h-4 w-4">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-4 w-4 bg-emerald-500 border-2 border-stone-950"></span>

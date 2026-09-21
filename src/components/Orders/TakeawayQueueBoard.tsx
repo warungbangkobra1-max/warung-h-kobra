@@ -19,6 +19,7 @@ import {
   Search,
 } from 'lucide-react';
 import { Transaction, StoreSettings } from '../../types';
+import { BrandLogo } from '../Common/BrandLogo';
 import {
   formatRupiah,
   getTakeawayQueueNumber,
@@ -432,20 +433,13 @@ export const TakeawayQueueBoard: React.FC<TakeawayQueueBoardProps> = ({
           {/* TV Header */}
           <div className="bg-stone-900 border-b-2 border-amber-500/40 px-6 py-4 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-3">
-              {settings.logoUrl ? (
-                <img
-                  src={settings.logoUrl}
-                  alt={settings.storeName}
-                  className="w-10 h-10 object-contain rounded-xl"
-                  onError={(e) => {
-                    (e.target as HTMLElement).style.display = 'none';
-                  }}
-                />
-              ) : (
-                <div className="w-10 h-10 rounded-xl bg-amber-500 text-stone-950 flex items-center justify-center font-black text-lg">
-                  K
-                </div>
-              )}
+              <BrandLogo
+                src={settings.logoUrl}
+                alt={settings.storeName}
+                size="md"
+                rounded="rounded-xl"
+                className="w-10 h-10 shrink-0 border border-amber-500/30"
+              />
               <div>
                 <h1 className="text-xl sm:text-2xl font-black tracking-wider uppercase text-amber-400">
                   {settings.storeName}
